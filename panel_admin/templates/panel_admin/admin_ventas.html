@@ -1,0 +1,193 @@
+{% extends 'panel_admin/admin_base.html' %}
+
+{% block titulo %}Admin - Ventas{% endblock %}
+
+{% block contenido %}
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-9 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Ventas en el último año</h3>
+            <div id="graficoLinealVentasAnio" class="flex-grow-1 overflow-auto contenedor-grafico"></div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-12 pt-3">
+        <div class="box d-flex flex-column justify-content-center h-100">
+            <h3 class="text-center py-3 px-1">Días con más ventas</h3>
+            <div class="flex-grow-1 px-4">
+                {% if top_dias_data %}
+                    {% for dia in top_dias_data %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ dia.dia }}</h4>
+                            <h4>{{ dia.total_ventas }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Métodos de pago</h3>
+            <div id="graficoCircularPagos" class="flex-grow-1 contenedor-grafico"></div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Ingresos del mes</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">S/.{{ ingresos_mes }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Horas con más ventas</h3>
+            <div class="flex-grow-1 px-4">
+                {% if top_horas_data %}
+                    {% for hora in top_horas_data %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ hora.hora }}</h4>
+                            <h4>{{ hora.total_ventas }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center">
+                        <h4>Sin datos</h4>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Costo promedio de venta</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">S/.{{ costo_promedio_venta }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const chartData = {{ data_ventas|safe }};
+    const chartMeses = {{ meses|safe }};
+    
+    const graficoLinealVentasAnio = echarts.init(document.getElementById('graficoLinealVentasAnio'));
+
+    const ventas = chartData.map(item => {
+        const ventasString = item.split(' - ')[0];
+        return parseFloat(ventasString);
+    });
+
+    const ganancias = chartData.map(item => {
+        const gananciasString = item.split(' - ')[1];
+        return parseFloat(gananciasString.replace('S/.', '').replace(',', '')); 
+    });
+
+    const option = {
+        title: {
+            text: null,
+        },
+        tooltip: {
+            trigger: 'axis',
+        },
+        xAxis: {
+            type: 'category',
+            data: chartMeses,
+            axisLabel: {
+                rotate: 30
+            }
+        },
+        yAxis: [{
+            type: 'value',
+            name: 'Ventas',
+            axisLabel: {
+                formatter: '{value}'
+            }
+        }, {
+            type: 'value',
+            name: 'Ganancias (S/.)',
+            axisLabel: {
+                formatter: 'S/. {value}'
+            }
+        }],
+        series: [{
+            name: 'Ventas',
+            type: 'line',
+            data: ventas,
+            smooth: true,
+            itemStyle: {
+                color: '#D03139'
+            },
+            lineStyle: {
+                width: 3
+            },
+            symbol: 'circle',
+            symbolSize: 8,
+        }, {
+            name: 'Ganancias (S/.)',
+            type: 'line',
+            data: ganancias,
+            smooth: true,
+            itemStyle: {
+                color: '#4CAF50'
+            },
+            lineStyle: {
+                width: 3
+            },
+            symbol: 'circle',
+            symbolSize: 8,
+        }]
+    };
+    graficoLinealVentasAnio.setOption(option);
+
+    // Gráfico Circular de Métodos de Pago
+    const chartDataPagos = {{ data_pagos|safe }};
+    const graficoCircularPagos = echarts.init(document.getElementById('graficoCircularPagos'));
+
+    const optionCircular = {
+        title: {
+            left: 'center',
+            textStyle: {
+                fontSize: 18
+            }
+        },
+        tooltip: {
+            trigger: 'item',
+            formatter: '{a} <br/>{b}: {c} ({d}%)'
+        },
+        color: ['#D03139', '#FFD40D', '0D6EfD'],
+        series: [
+            {
+                name: 'Métodos de Pago',
+                type: 'pie',
+                radius: '80%',
+                center: ['50%', '45%'],
+                data: chartDataPagos.map(item => ({ name: item[0], value: item[1] })),
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                },
+                label: {
+                    formatter: '{b}: {d}%'
+                }
+            }
+        ]
+    };
+    graficoCircularPagos.setOption(optionCircular);
+</script>
+{% endblock %}

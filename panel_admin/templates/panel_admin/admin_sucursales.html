@@ -1,0 +1,118 @@
+{% extends 'panel_admin/admin_base.html' %}
+
+{% block titulo %}Admin - Sucursales{% endblock %}
+
+{% block contenido %}
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-9 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Ventas por sucursal</h3>
+            <div id="graficoBarrasVentasSucursal" class="flex-grow-1 overflow-auto contenedor-grafico"></div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-12 pt-3">
+        <div class="box d-flex flex-column justify-content-center h-100">
+            <h3 class="text-center py-3 px-1">Clientes por sucursal</h3>
+            <div class="flex-grow-1 px-4">
+                {% if data_clientes_sucursal %}
+                    {% for d_cliente in data_clientes_sucursal %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ d_cliente.0 }}</h4>
+                            <h4>{{ d_cliente.1 }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Empleados por sucursal</h3>
+            <div class="flex-grow-1 px-4">
+                {% if data_empleados_sucursal %}
+                    {% for d_empleado in data_empleados_sucursal %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ d_empleado.0 }}</h4>
+                            <h4>{{ d_empleado.1 }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Ganancias promedio por sucursal</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ ganancias_promedio_sucursal }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Pedidos promedio por sucursal</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ pedidos_promedio_sucursal }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const chartDataSucursalesVenta = {{ data_ventas_sucursal|safe }};
+    console.log(chartDataSucursalesVenta);
+    const sucursales = chartDataSucursalesVenta.map(item => item[0]);
+    console.log(sucursales);
+    const ventas = chartDataSucursalesVenta.map(item => item[1]);
+    console.log(ventas);
+    const arreglo_colores = ["#FF6787", "#FFB68C", "#B6D3E2", "#97ED97"];
+    const graficoBarras = echarts.init(document.getElementById('graficoBarrasVentasSucursal'));
+    const option = {
+        title: {
+            text: '',
+            subtext: '',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow'
+            }
+        },
+        xAxis: {
+            type: 'category',
+            data: sucursales
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Ventas'
+        },
+        series: [{
+            name: 'Ventas', 
+            type: 'bar', 
+            data: ventas,
+            barMaxWidth: 70,
+            itemStyle: { 
+                color: function (params) { 
+                    return arreglo_colores[params.dataIndex % arreglo_colores.length]; 
+                } 
+            }
+        }]
+    };
+    graficoBarras.setOption(option);
+</script>
+
+
+{% endblock %}

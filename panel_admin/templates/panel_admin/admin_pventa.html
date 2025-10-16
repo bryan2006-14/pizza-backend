@@ -1,0 +1,111 @@
+{% extends 'panel_admin/admin_base.html' %}
+
+{% block titulo %}Admin - Prod. Venta{% endblock %}
+
+{% block contenido %}
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-9 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Productos Venta más vendidos</h3>
+            <div id="graficoBarrasProdPrimaMasVendidos" class="flex-grow-1 contenedor-grafico"></div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Productos Venta menos vendidos</h3>
+            <div class="flex-grow-1 px-4">
+                {% if prod_prima_menos_vendidos %}
+                    {% for prod in prod_prima_menos_vendidos %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ prod.0 }}</h4>
+                            <h4>{{ prod.1 }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Precio promedio de productos Venta</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">S/.{{ precio_promedio_prod_prima }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Productos Venta con bajo stock</h3>
+            <div class="flex-grow-1 px-4">
+                {% if prod_prima_bajo_stock %}
+                    {% for prod in prod_prima_bajo_stock %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ prod.0 }}</h4>
+                            <h4>{{ prod.1 }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Categorías más vendidas</h3>
+            <div class="flex-grow-1 px-4">
+                {% if prod_prima_bajo_stock %}
+                    {% for prod in prod_prima_bajo_stock %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ prod.0 }}</h4>
+                            <h4>{{ prod.1 }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+        const chartDataProductos = {{ prod_prima_mas_vendidos|safe }};
+        const nombresProductos = chartDataProductos.map(item => item[0]);
+        const cantidades = chartDataProductos.map(item => item[1]);
+        const arreglo_colores = ["#FF6787", "#FFB68C", "#B6D3E2", "#97ED97", "#55CBD3", "#D18BC0", "#F9D877", "#FE8E7B",  "#C7EEFF", "#6384B3"];
+        const graficoLinealVentasAnio = echarts.init(document.getElementById('graficoBarrasProdPrimaMasVendidos'));
+        const option = {
+            title: {
+                text: null
+            },
+            tooltip: {},
+            xAxis: {
+                type: 'category',
+                data: nombresProductos
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [{
+                name: 'Ventas',
+                type: 'bar',
+                data: cantidades,
+                itemStyle: {
+                    color: (params) => arreglo_colores[params.dataIndex % arreglo_colores.length]
+                }
+            }]
+        };
+        graficoLinealVentasAnio.setOption(option);
+    </script>
+{% endblock %}

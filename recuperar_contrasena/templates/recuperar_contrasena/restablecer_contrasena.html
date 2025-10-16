@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Contraseña</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container">
+        <h2>Restablecer Contraseña</h2>
+        <p>Ingrese su nueva contraseña.</p>
+        
+        {% if success_message %}
+            <script>
+                alert("{{ success_message }}");
+            </script>
+        {% endif %}
+        
+        <form id="reset-password-form" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="password">Nueva Contraseña</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="confirm-password">Confirmar Contraseña</label>
+                <input type="password" class="form-control" id="confirm-password" name="confirm_password" required>
+                <small id="password-help" class="form-text text-muted">Las contraseñas deben coincidir.</small>
+            </div>
+            <button type="submit" class="btn" style="background-color: #ffc107; color: black;" id="submit-btn" disabled>Restablecer Contraseña</button>
+        </form>
+    </div>
+    
+    <script>
+        const passwordField = document.getElementById('password');
+        const confirmPasswordField = document.getElementById('confirm-password');
+        const submitBtn = document.getElementById('submit-btn');
+        const passwordHelpText = document.getElementById('password-help');
+
+        function checkPasswordsMatch() {
+            const password = passwordField.value;
+            const confirmPassword = confirmPasswordField.value;
+    
+            if (password === confirmPassword && password !== "") {
+                confirmPasswordField.classList.remove('is-invalid');
+                confirmPasswordField.classList.add('is-valid');
+                submitBtn.disabled = false;
+                passwordHelpText.classList.remove('text-muted');
+                passwordHelpText.classList.add('text-success');
+                passwordHelpText.textContent = 'Las contraseñas coinciden.';
+            } else {
+                confirmPasswordField.classList.remove('is-valid');
+                confirmPasswordField.classList.add('is-invalid');
+                submitBtn.disabled = true;
+                passwordHelpText.classList.remove('text-success');
+                passwordHelpText.classList.add('text-danger');
+                passwordHelpText.textContent = 'Las contraseñas no coinciden.';
+            }
+        }
+        passwordField.addEventListener('input', checkPasswordsMatch);
+        confirmPasswordField.addEventListener('input', checkPasswordsMatch);
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+</html>

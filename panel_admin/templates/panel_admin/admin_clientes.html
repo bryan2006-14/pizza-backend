@@ -1,0 +1,102 @@
+{% extends 'panel_admin/admin_base.html' %}
+
+{% block titulo %}Admin - Clientes{% endblock %}
+
+{% block contenido %}
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-9 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Clientes en el último año</h3>
+            <div id="graficoLinealLCientesAnio" class="flex-grow-1 overflow-auto contenedor-grafico"></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-12 pt-3">
+        <div class="box d-flex flex-column justify-content-center h-100">
+            <h3 class="text-center py-3 px-1">Clientes más frecuentes</h3>
+            <div class="flex-grow-1 px-4">
+                {% if clientes_mas_frecuentes %}
+                    {% for cliente in clientes_mas_frecuentes %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ cliente.0 }}</h4>
+                            <h4>{{ cliente.1 }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>            
+    </div>
+</div>
+
+<div class="row custom-height mx-0">      
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Porcentaje de retención</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ porcentaje_retencion }}% </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box h-100 d-flex flex-column">
+            <h3 class="text-center py-3 px-1">Total de clientes</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ total_clientes }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box h-100 d-flex flex-column">
+            <h3 class="text-center py-3 px-1">Clientes nuevos este mes</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ clientes_nuevos_mes }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script>
+        const chartDataClientes = {{ clientes_por_cada_mes_ultimo_anio|safe }};
+        const arregloMeses = {{ meses|safe }};
+        const graficoLineal = echarts.init(document.getElementById('graficoLinealLCientesAnio'));
+        const option = {
+        title: {
+            text: null,
+        },
+        tooltip: {
+            trigger: 'axis',
+        },
+        xAxis: {
+            type: 'category',
+            data: arregloMeses,
+            axisLabel: {
+                rotate: 30
+            }
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Clientes',
+        },
+        series: [{
+            name: 'Clientes',
+            type: 'line',
+            data: chartDataClientes,
+            smooth: true,
+            itemStyle: {
+                color: '#D03139'
+            },
+            lineStyle: {
+                width: 3
+            },
+            symbol: 'circle',
+            symbolSize: 8,
+        }]
+    };
+
+    graficoLineal.setOption(option);
+</script>
+    {% endblock %}

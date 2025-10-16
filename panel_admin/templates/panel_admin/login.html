@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Admin</title>
+    <link rel="stylesheet" href="{% static 'panel_admin/css/style.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+    <style>
+        body {
+            font-family: "Fugaz One", sans-serif !important;
+            background: linear-gradient(135deg, #D03139, #FFD40D);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .login-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        .login-card h2 {
+            font-weight: bold;
+            color: #D03139;
+        }
+
+        .form-control {
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 2px solid #FFD40D;
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            border-color: #D03139;
+            box-shadow: 0 0 6px rgba(208,49,57,0.6);
+        }
+
+        .btn-login {
+            background-color: #FFD40D;
+            color: #000;
+            font-weight: bold;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 1.1rem;
+            transition: 0.3s;
+        }
+
+        .btn-login:hover {
+            background-color: #D03139;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card text-center">
+        <h2 class="mb-4">Iniciar Sesión - Admin</h2>
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            
+            <div class="mb-3 text-start">
+                <label for="txtNombreUsuario" class="form-label">Nombre de usuario</label>
+                <input type="text" class="form-control" name="usuario" id="txtNombreUsuario" required>
+            </div>
+
+            <div class="mb-3 text-start">
+                <label for="txtContrasena" class="form-label">Contraseña</label>
+                <input type="password" class="form-control" name="contrasena" id="txtContrasena" required>
+            </div>
+
+            <button type="submit" class="btn btn-login w-100">Iniciar Sesión</button>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            {% if messages %}
+                {% for message in messages %}
+                    toastr.error("{{ message }}");
+                {% endfor %}
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

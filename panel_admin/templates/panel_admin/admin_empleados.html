@@ -1,0 +1,170 @@
+{% extends 'panel_admin/admin_base.html' %}
+
+{% block titulo %}Admin - Empleados{% endblock %}
+
+{% block contenido %}
+
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-9 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Mejor empleado por meses</h3>
+            <div id="graficoBarrasVentasEmpleadoMeses" class="flex-grow-1 overflow-auto contenedor-grafico"></div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-12 pt-3">
+        <div class="box d-flex flex-column justify-content-center h-100">
+            <h3 class="text-center py-3 px-1">Empleados con más ingresos</h3>
+            <div class="flex-grow-1 px-4">
+                {% if empleados_mas_ingresos %}
+                    {% for empleado in empleados_mas_ingresos %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ empleado.0 }}</h4>
+                            <h4>{{ empleado.1 }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Empleados más eficaces (mins)</h3>
+            <div class="flex-grow-1 px-4">
+                {% if empleados_mas_eficaces %}
+                    {% for empleado in empleados_mas_eficaces %}
+                        <div class="d-flex justify-content-between">
+                            <h4>{{ empleado.0 }}</h4>
+                            <h4>{{ empleado.1 }}</h4>
+                        </div>
+                        <hr class="m-1">
+                    {% endfor %}
+                {% else %}
+                    <h4 class="text-center">Sin datos</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Estados actuales</h3>
+            <div id="graficoCircular" class="flex-grow-1 contenedor-grafico"></div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Ventas promedio por empleado</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ ventas_promedio_por_empleado }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Tiempo en hacer entrega</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ tiempo_promedio_pedido }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const chartDataEmpleadosVentas = {{ data_empleados_mas_ventas|safe }};
+    const empleadosMasEficaces = {{ empleados_mas_eficaces | safe}};
+    const chartMeses = {{ meses|safe }};
+    const arreglo_colores = ["#FF6787", "#FFB68C", "#B6D3E2", "#97ED97", "#55CBD3", "#D18BC0", "#F9D877", "#FE8E7B", "#C7EEFF", "#6384B3", "#7FBEAF", "#EE9B69"];
+
+    const graficoBarras = echarts.init(document.getElementById('graficoBarrasVentasEmpleadoMeses'));
+    const option = {
+        tooltip: {
+            show: false
+        },
+        legend: {
+            data: chartDataEmpleadosVentas.map(item => item[0]),
+            bottom: 0
+        },
+        xAxis: {
+            type: 'category',
+            data: chartMeses
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Ventas'
+        },
+        series: chartDataEmpleadosVentas.map((empleado, index) => ({
+            name: empleado[0],
+            type: 'bar',
+            stack: 'ventas',
+            label: {
+                show: true,
+                position: 'inside',
+                formatter: function(params) {
+                    return params.value === 0 ? '' : params.value;
+                }
+            },
+            itemStyle: {
+                color: arreglo_colores[index % arreglo_colores.length]
+            },
+            data: chartMeses.map((_, i) => i === index ? empleado[1] : 0)
+        }))
+    };
+
+    graficoBarras.setOption(option);
+    
+
+    /*************************************/
+    const chartDataEstadoEmpleados = {{ estado_empleados|safe }};
+    console.log(chartDataEstadoEmpleados);
+    const data = chartDataEstadoEmpleados.map(item => ({
+        value: item[1],
+        name: item[0]
+    }));
+
+    const graficoCircular = echarts.init(document.getElementById('graficoCircular'));
+
+    const optionCircular = {
+        tooltip: {
+            trigger: 'item',
+            formatter: function (params) {
+                return `<span style="display:inline-block;width:10px;height:10px;background-color:${params.color};border-radius:50%;margin-right:5px;"></span> ${params.name}: ${params.value} (${params.percent}%)`;
+            }
+        },
+        series: [{
+            type: 'pie',
+            radius: ['40%', '90%'],
+            data: data,
+            emphasis: {
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+            },
+            label: {
+                show: true,
+                formatter: '{b}: {c} ({d}%)'
+            },
+            labelLine: {
+                show: false
+            }
+        }],
+        color: arreglo_colores
+    };
+
+    graficoCircular.setOption(optionCircular);
+</script>
+
+
+
+{% endblock %}
