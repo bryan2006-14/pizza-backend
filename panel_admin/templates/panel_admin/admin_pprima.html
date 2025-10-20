@@ -6,90 +6,143 @@
 
 <div class="row custom-height mx-0 py-2">
     <div class="col-lg-9 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Productos prima más vendidos</h3>
-            <div id="graficoBarrasProdPrimaMasVendidos" class="flex-grow-1 overflow-auto" style="min-height: 200px !important;"></div>
+        <div class="contenedor-grafico grafico-xl chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-chart-bar"></i>
+                    Productos Prima Más Vendidos
+                </h3>
+                <div class="grafico-controls">
+                    <div class="selector-tiempo">
+                        <button class="btn-tiempo active">1M</button>
+                        <button class="btn-tiempo">3M</button>
+                        <button class="btn-tiempo">1A</button>
+                    </div>
+                </div>
+            </div>
+            <div id="graficoBarrasProdPrimaMasVendidos" class="chart-container"></div>
+            <div class="grafico-stats">
+                <div class="stat-item">
+                    <div class="stat-valor">{{ producto_top|default:"-" }}</div>
+                    <div class="stat-label">Producto Top</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-valor">{{ total_ventas|default:"0" }}</div>
+                    <div class="stat-label">Ventas Totales</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-valor">{{ crecimiento|default:"0%" }}</div>
+                    <div class="stat-label">Crecimiento</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-valor">{{ productos_activos|default:"0" }}</div>
+                    <div class="stat-label">Productos Activos</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="col-lg-3 col-12 pt-3">
-        <div class="box d-flex flex-column justify-content-center h-100">
-            <h3 class="text-center py-3 px-1">Costo total actual del inventario</h3>
-            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
-                <p class="color-numero">S/.{{ costo_total_inventario }}</p>
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-money-bill-wave"></i>
+                    Costo Total Inventario
+                </h3>
+            </div>
+            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+                <div class="contenedor-texto text-center">
+                    <p class="color-numero mb-2">S/.{{ costo_total_inventario|default:"0" }}</p>
+                    <div class="stat-label">Valor Actual</div>
+                </div>
+                <div class="performance-indicator {% if costo_total_inventario < 10000 %}performance-positive{% else %}performance-warning{% endif %} mt-3">
+                    <i class="fas {% if costo_total_inventario < 10000 %}fa-check{% else %}fa-exclamation{% endif %}"></i>
+                    {{ variacion_inventario|default:"0" }}%
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <div class="row custom-height mx-0 py-2">
-    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Productos Prima menos vendidos</h3>
-            <div class="flex-grow-1 px-4">
+    <div class="col-lg-4 col-md-6 col-12 pt-3">
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-arrow-down"></i>
+                    Menos Vendidos
+                </h3>
+            </div>
+            <div class="chart-container d-flex flex-column justify-content-center">
                 {% if prod_prima_menos_vendidos %}
-                    {% for prod in prod_prima_menos_vendidos %}
-                        <div class="d-flex justify-content-between">
-                            <h4>{{ prod.0 }}</h4>
-                            <h4>{{ prod.1 }}</h4>
+                    <div class="chart-legend">
+                        {% for prod in prod_prima_menos_vendidos %}
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: var(--pizza-orange);"></div>
+                            <span>{{ prod.0 }}</span>
+                            <strong>{{ prod.1 }}</strong>
                         </div>
-                        <hr class="m-1">
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    <h4 class="text-center">Sin datos</h4>
+                    <div class="grafico-loading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Sin datos disponibles</div>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Precio promedio de productos prima</h3>
-            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
-                <p class="color-numero">S/.{{ precio_promedio_prod_prima }}</p>
+    <div class="col-lg-4 col-md-6 col-12 pt-3">
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-chart-line"></i>
+                    Precio Promedio
+                </h3>
+            </div>
+            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+                <div class="contenedor-texto text-center">
+                    <p class="color-numero mb-2">S/.{{ precio_promedio_prod_prima|default:"0" }}</p>
+                    <div class="stat-label">Precio Promedio</div>
+                </div>
+                <div class="performance-indicator {% if precio_promedio_prod_prima < 50 %}performance-positive{% else %}performance-warning{% endif %} mt-3">
+                    <i class="fas {% if precio_promedio_prod_prima < 50 %}fa-arrow-down{% else %}fa-arrow-up{% endif %}"></i>
+                    {{ variacion_precio|default:"0" }}%
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Productos prima con bajo stock</h3>
-            <div class="flex-grow-1 px-4">
+    <div class="col-lg-4 col-md-6 col-12 pt-3">
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Bajo Stock
+                </h3>
+            </div>
+            <div class="chart-container d-flex flex-column justify-content-center">
                 {% if prod_prima_bajo_stock %}
-                    {% for prod in prod_prima_bajo_stock %}
-                        <div class="d-flex justify-content-between">
-                            <h4>{{ prod.0 }}</h4>
-                            <h4>{{ prod.1 }}</h4>
+                    <div class="chart-legend">
+                        {% for prod in prod_prima_bajo_stock %}
+                        <div class="legend-item warning">
+                            <div class="legend-color" style="background-color: var(--pizza-red);"></div>
+                            <span>{{ prod.0 }}</span>
+                            <strong>{{ prod.1 }}</strong>
                         </div>
-                        <hr class="m-1">
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    <h4 class="text-center">Sin datos</h4>
+                    <div class="grafico-loading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Stock en niveles normales</div>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
-
-    <!--
-    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Categorías más vendidas</h3>
-            <div class="flex-grow-1 px-4">
-                {% if prod_prima_bajo_stock %}
-                    {% for prod in prod_prima_bajo_stock %}
-                        <div class="d-flex justify-content-between">
-                            <h4>{{ prod.0 }}</h4>
-                            <h4>{{ prod.1 }}</h4>
-                        </div>
-                        <hr class="m-1">
-                    {% endfor %}
-                {% else %}
-                    <h4 class="text-center">Sin datos</h4>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    -->
 </div>
 
 <script>
@@ -97,40 +150,165 @@ const chartDataProductos = JSON.parse('{{ prod_prima_mas_vendidos|escapejs }}');
 const nombresProductos = chartDataProductos.map(item => item[0]);
 const cantidades = chartDataProductos.map(item => item[1]);
 
-const arreglo_colores = ["#FF6787", "#FFB68C", "#B6D3E2", "#97ED97", "#55CBD3", "#D18BC0", "#F9D877", "#FE8E7B", "#C7EEFF", "#6384B3"];
-const graficoLinealVentasAnio = echarts.init(document.getElementById('graficoBarrasProdPrimaMasVendidos'));
+const arreglo_colores = [
+    "var(--pizza-red)", "var(--pizza-orange)", "var(--pizza-yellow)", "var(--pizza-gold)",
+    "#FF6787", "#FFB68C", "#B6D3E2", "#97ED97", "#55CBD3", "#D18BC0", 
+    "#F9D877", "#FE8E7B", "#C7EEFF", "#6384B3", "#7FBEAF", "#EE9B69"
+];
+
+const graficoBarras = echarts.init(document.getElementById('graficoBarrasProdPrimaMasVendidos'));
 
 const option = {
     title: {
-        text: null
+        text: 'Top Productos Prima - Volumen de Ventas',
+        subtext: 'Productos más demandados del inventario',
+        left: 'center',
+        textStyle: {
+            color: 'var(--pizza-red)',
+            fontSize: 18,
+            fontWeight: 'bold'
+        },
+        subtextStyle: {
+            color: 'var(--text-secondary)',
+            fontSize: 14
+        }
     },
-    tooltip: {},
+    tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+            type: 'shadow'
+        },
+        backgroundColor: 'var(--pizza-red)',
+        borderColor: 'var(--pizza-yellow)',
+        textStyle: {
+            color: 'white',
+            fontSize: 14
+        },
+        formatter: function(params) {
+            return `<strong>${params[0].name}</strong><br/>
+                   Ventas: <b>${params[0].value}</b><br/>
+                   Porcentaje: <b>${((params[0].value / cantidades.reduce((a, b) => a + b, 0)) * 100).toFixed(1)}%</b>`;
+        }
+    },
     xAxis: {
         type: 'category',
         data: nombresProductos,
         axisLabel: {
+            color: 'var(--text-primary)',
+            fontSize: 11,
+            fontWeight: 'bold',
             rotate: 35,
             formatter: (value) => {
-                const maxLength = 10;
+                const maxLength = 12;
                 return value.length > maxLength ? value.slice(0, maxLength) + '...' : value;
+            }
+        },
+        axisLine: {
+            lineStyle: {
+                color: 'var(--pizza-orange)'
             }
         }
     },
     yAxis: {
-        type: 'value'
+        type: 'value',
+        name: 'Cantidad Vendida',
+        nameTextStyle: {
+            color: 'var(--text-secondary)',
+            fontSize: 12,
+            fontWeight: 'bold'
+        },
+        axisLabel: {
+            color: 'var(--text-primary)',
+            fontSize: 11
+        },
+        axisLine: {
+            lineStyle: {
+                color: 'var(--pizza-orange)'
+            }
+        },
+        splitLine: {
+            lineStyle: {
+                color: 'var(--border-color)',
+                type: 'dashed'
+            }
+        }
     },
     series: [{
         name: 'Ventas',
         type: 'bar',
         data: cantidades,
+        barMaxWidth: 50,
         itemStyle: {
-            color: (params) => arreglo_colores[params.dataIndex % arreglo_colores.length]
+            color: (params) => arreglo_colores[params.dataIndex % arreglo_colores.length],
+            borderRadius: [6, 6, 0, 0],
+            borderWidth: 2,
+            borderColor: '#fff'
+        },
+        emphasis: {
+            itemStyle: {
+                shadowBlur: 15,
+                shadowColor: 'rgba(227, 30, 36, 0.5)'
+            }
+        },
+        label: {
+            show: true,
+            position: 'top',
+            color: 'var(--text-primary)',
+            fontWeight: 'bold',
+            fontSize: 10,
+            formatter: '{c}'
         }
-    }]
+    }],
+    grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '20%',
+        top: '20%',
+        containLabel: true
+    },
+    animation: true,
+    animationDuration: 1500,
+    animationEasing: 'elasticOut'
 };
 
-graficoLinealVentasAnio.setOption(option);
+graficoBarras.setOption(option);
 
+// Responsive handling
+window.addEventListener('resize', function() {
+    graficoBarras.resize();
+});
+
+// Time selector functionality
+document.querySelectorAll('.btn-tiempo').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.btn-tiempo').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Aquí puedes agregar la lógica para actualizar los datos según el período seleccionado
+        console.log('Período seleccionado:', this.textContent);
+    });
+});
 </script>
+
+<style>
+    .custom-height {
+        min-height: calc(100vh - 100px);
+    }
+    
+    #graficoBarrasProdPrimaMasVendidos {
+        width: 100%;
+        height: 100%;
+        border-radius: 15px;
+    }
+    
+    .contenedor-texto .color-numero {
+        font-size: 3rem !important;
+    }
+    
+    .legend-item.warning {
+        border-left: 3px solid var(--pizza-red);
+        background: rgba(227, 30, 36, 0.1);
+    }
+</style>
 
 {% endblock %}

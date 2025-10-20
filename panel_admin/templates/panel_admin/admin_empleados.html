@@ -6,26 +6,66 @@
 
 <div class="row custom-height mx-0 py-2">
     <div class="col-lg-9 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Mejor empleado por meses</h3>
-            <div id="graficoBarrasVentasEmpleadoMeses" class="flex-grow-1 overflow-auto contenedor-grafico"></div>
+        <div class="contenedor-grafico grafico-xl chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-trophy"></i>
+                    Mejor Empleado por Meses
+                </h3>
+                <div class="grafico-controls">
+                    <div class="selector-tiempo">
+                        <button class="btn-tiempo active">1A</button>
+                        <button class="btn-tiempo">6M</button>
+                        <button class="btn-tiempo">3M</button>
+                    </div>
+                </div>
+            </div>
+            <div id="graficoBarrasVentasEmpleadoMeses" class="chart-container"></div>
+            <div class="grafico-stats">
+                <div class="stat-item">
+                    <div class="stat-valor">{{ empleado_top|default:"-" }}</div>
+                    <div class="stat-label">Empleado del Mes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-valor">{{ ventas_totales|default:"0" }}</div>
+                    <div class="stat-label">Ventas Totales</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-valor">{{ crecimiento|default:"0%" }}</div>
+                    <div class="stat-label">Crecimiento</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-valor">{{ meses_consecutivos|default:"0" }}</div>
+                    <div class="stat-label">Meses Líder</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="col-lg-3 col-12 pt-3">
-        <div class="box d-flex flex-column justify-content-center h-100">
-            <h3 class="text-center py-3 px-1">Empleados con más ingresos</h3>
-            <div class="flex-grow-1 px-4">
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-medal"></i>
+                    Top Empleados - Ingresos
+                </h3>
+            </div>
+            <div class="chart-container d-flex flex-column justify-content-center">
                 {% if empleados_mas_ingresos %}
-                    {% for empleado in empleados_mas_ingresos %}
-                        <div class="d-flex justify-content-between">
-                            <h4>{{ empleado.0 }}</h4>
-                            <h4>{{ empleado.1 }}</h4>
+                    <div class="chart-legend">
+                        {% for empleado in empleados_mas_ingresos %}
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: var(--pizza-gold);"></div>
+                            <span>{{ empleado.0 }}</span>
+                            <strong>${{ empleado.1 }}</strong>
                         </div>
-                        <hr class="m-1">
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    <h4 class="text-center">Sin datos</h4>
+                    <div class="grafico-loading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Sin datos disponibles</div>
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -33,74 +73,184 @@
 </div>
 
 <div class="row custom-height mx-0 py-2">
-    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Empleados más eficaces (mins)</h3>
-            <div class="flex-grow-1 px-4">
+    <div class="col-lg-3 col-md-6 col-12 pt-3">
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-bolt"></i>
+                    Empleados Más Eficaces
+                </h3>
+            </div>
+            <div class="chart-container d-flex flex-column justify-content-center">
                 {% if empleados_mas_eficaces %}
-                    {% for empleado in empleados_mas_eficaces %}
-                        <div class="d-flex justify-content-between">
-                            <h4>{{ empleado.0 }}</h4>
-                            <h4>{{ empleado.1 }}</h4>
+                    <div class="chart-legend">
+                        {% for empleado in empleados_mas_eficaces %}
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: var(--pizza-orange);"></div>
+                            <span>{{ empleado.0 }}</span>
+                            <strong>{{ empleado.1 }}min</strong>
                         </div>
-                        <hr class="m-1">
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    <h4 class="text-center">Sin datos</h4>
+                    <div class="grafico-loading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Sin datos disponibles</div>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Estados actuales</h3>
-            <div id="graficoCircular" class="flex-grow-1 contenedor-grafico"></div>
+    <div class="col-lg-3 col-md-6 col-12 pt-3">
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-chart-pie"></i>
+                    Estados de Empleados
+                </h3>
+            </div>
+            <div id="graficoCircular" class="chart-container"></div>
         </div>
     </div>
 
-    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Ventas promedio por empleado</h3>
-            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
-                <p class="color-numero">{{ ventas_promedio_por_empleado }}</p>
+    <div class="col-lg-3 col-md-6 col-12 pt-3">
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-chart-bar"></i>
+                    Ventas Promedio
+                </h3>
+            </div>
+            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+                <div class="contenedor-texto text-center">
+                    <p class="color-numero mb-2">${{ ventas_promedio_por_empleado|default:"0" }}</p>
+                    <div class="stat-label">Por Empleado</div>
+                </div>
+                <div class="performance-indicator performance-positive mt-3">
+                    <i class="fas fa-arrow-up"></i>+{{ crecimiento_ventas|default:"0" }}%
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
-        <div class="box d-flex flex-column h-100">
-            <h3 class="text-center py-3 px-1">Tiempo en hacer entrega</h3>
-            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
-                <p class="color-numero">{{ tiempo_promedio_pedido }}</p>
+    <div class="col-lg-3 col-md-6 col-12 pt-3">
+        <div class="contenedor-grafico grafico-md chart-entrance">
+            <div class="grafico-header">
+                <h3 class="grafico-titulo">
+                    <i class="fas fa-clock"></i>
+                    Tiempo de Entrega
+                </h3>
+            </div>
+            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+                <div class="contenedor-texto text-center">
+                    <p class="color-numero mb-2">{{ tiempo_promedio_pedido|default:"0" }}</p>
+                    <div class="stat-label">Minutos Promedio</div>
+                </div>
+                <div class="performance-indicator {% if tiempo_promedio_pedido <= 30 %}performance-positive{% else %}performance-negative{% endif %} mt-3">
+                    <i class="fas {% if tiempo_promedio_pedido <= 30 %}fa-arrow-down{% else %}fa-arrow-up{% endif %}"></i>
+                    {{ eficiencia|default:"0" }}%
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-
 <script>
     const chartDataEmpleadosVentas = {{ data_empleados_mas_ventas|safe }};
-    const empleadosMasEficaces = {{ empleados_mas_eficaces | safe}};
+    const empleadosMasEficaces = {{ empleados_mas_eficaces|safe }};
     const chartMeses = {{ meses|safe }};
-    const arreglo_colores = ["#FF6787", "#FFB68C", "#B6D3E2", "#97ED97", "#55CBD3", "#D18BC0", "#F9D877", "#FE8E7B", "#C7EEFF", "#6384B3", "#7FBEAF", "#EE9B69"];
+    
+    const arreglo_colores = [
+        "var(--pizza-red)", "var(--pizza-orange)", "var(--pizza-yellow)", "var(--pizza-gold)",
+        "#FF6787", "#FFB68C", "#B6D3E2", "#97ED97", "#55CBD3", "#D18BC0", 
+        "#F9D877", "#FE8E7B", "#C7EEFF", "#6384B3", "#7FBEAF", "#EE9B69"
+    ];
 
     const graficoBarras = echarts.init(document.getElementById('graficoBarrasVentasEmpleadoMeses'));
+    
     const option = {
+        title: {
+            text: 'Rendimiento de Empleados por Mes',
+            subtext: 'Comparativa mensual de ventas',
+            left: 'center',
+            textStyle: {
+                color: 'var(--pizza-red)',
+                fontSize: 18,
+                fontWeight: 'bold'
+            },
+            subtextStyle: {
+                color: 'var(--text-secondary)',
+                fontSize: 14
+            }
+        },
         tooltip: {
-            show: false
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow'
+            },
+            backgroundColor: 'var(--pizza-red)',
+            borderColor: 'var(--pizza-yellow)',
+            textStyle: {
+                color: 'white',
+                fontSize: 14
+            },
+            formatter: function(params) {
+                let result = `<strong>${params[0].name}</strong><br/>`;
+                params.forEach(item => {
+                    if (item.value > 0) {
+                        result += `<span style="display:inline-block;width:10px;height:10px;background:${item.color};border-radius:50%;margin-right:5px;"></span> ${item.seriesName}: $${item.value}<br/>`;
+                    }
+                });
+                return result;
+            }
         },
         legend: {
             data: chartDataEmpleadosVentas.map(item => item[0]),
-            bottom: 0
+            bottom: 10,
+            textStyle: {
+                color: 'var(--text-primary)',
+                fontSize: 11
+            }
         },
         xAxis: {
             type: 'category',
-            data: chartMeses
+            data: chartMeses,
+            axisLabel: {
+                color: 'var(--text-primary)',
+                fontSize: 11,
+                fontWeight: 'bold',
+                rotate: 30
+            },
+            axisLine: {
+                lineStyle: {
+                    color: 'var(--pizza-orange)'
+                }
+            }
         },
         yAxis: {
             type: 'value',
-            name: 'Ventas'
+            name: 'Ventas ($)',
+            nameTextStyle: {
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+                fontWeight: 'bold'
+            },
+            axisLabel: {
+                color: 'var(--text-primary)',
+                fontSize: 11
+            },
+            axisLine: {
+                lineStyle: {
+                    color: 'var(--pizza-orange)'
+                }
+            },
+            splitLine: {
+                lineStyle: {
+                    color: 'var(--border-color)',
+                    type: 'dashed'
+                }
+            }
         },
         series: chartDataEmpleadosVentas.map((empleado, index) => ({
             name: empleado[0],
@@ -109,23 +259,45 @@
             label: {
                 show: true,
                 position: 'inside',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: 10,
                 formatter: function(params) {
-                    return params.value === 0 ? '' : params.value;
+                    return params.value === 0 ? '' : `$${params.value}`;
                 }
             },
             itemStyle: {
-                color: arreglo_colores[index % arreglo_colores.length]
+                color: arreglo_colores[index % arreglo_colores.length],
+                borderRadius: [4, 4, 0, 0],
+                borderWidth: 1,
+                borderColor: '#fff'
+            },
+            emphasis: {
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowColor: 'rgba(0, 0, 0, 0.3)'
+                }
             },
             data: chartMeses.map((_, i) => i === index ? empleado[1] : 0)
-        }))
+        })),
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '15%',
+            top: '20%',
+            containLabel: true
+        },
+        animation: true,
+        animationDuration: 1500,
+        animationEasing: 'elasticOut'
     };
 
     graficoBarras.setOption(option);
-    
 
     /*************************************/
     const chartDataEstadoEmpleados = {{ estado_empleados|safe }};
-    console.log(chartDataEstadoEmpleados);
+    console.log('Datos de estado empleados:', chartDataEstadoEmpleados);
+    
     const data = chartDataEstadoEmpleados.map(item => ({
         value: item[1],
         name: item[0]
@@ -134,37 +306,103 @@
     const graficoCircular = echarts.init(document.getElementById('graficoCircular'));
 
     const optionCircular = {
+        title: {
+            text: 'Distribución por Estado',
+            subtext: 'Estado actual de empleados',
+            left: 'center',
+            textStyle: {
+                color: 'var(--pizza-red)',
+                fontSize: 16,
+                fontWeight: 'bold'
+            },
+            subtextStyle: {
+                color: 'var(--text-secondary)',
+                fontSize: 12
+            }
+        },
         tooltip: {
             trigger: 'item',
+            backgroundColor: 'var(--pizza-red)',
+            borderColor: 'var(--pizza-yellow)',
+            textStyle: {
+                color: 'white',
+                fontSize: 14
+            },
             formatter: function (params) {
-                return `<span style="display:inline-block;width:10px;height:10px;background-color:${params.color};border-radius:50%;margin-right:5px;"></span> ${params.name}: ${params.value} (${params.percent}%)`;
+                return `<strong>${params.name}</strong><br/>
+                       Cantidad: <b>${params.value}</b><br/>
+                       Porcentaje: <b>${params.percent}%</b>`;
             }
         },
         series: [{
             type: 'pie',
-            radius: ['40%', '90%'],
+            radius: ['50%', '80%'],
             data: data,
             emphasis: {
                 itemStyle: {
-                    shadowBlur: 10,
+                    shadowBlur: 15,
                     shadowOffsetX: 0,
                     shadowColor: 'rgba(0, 0, 0, 0.5)'
                 }
             },
             label: {
                 show: true,
-                formatter: '{b}: {c} ({d}%)'
+                formatter: '{b}: {c}',
+                color: 'var(--text-primary)',
+                fontWeight: 'bold',
+                fontSize: 11
             },
             labelLine: {
-                show: false
+                show: true,
+                length: 10,
+                length2: 15
+            },
+            itemStyle: {
+                borderRadius: 8,
+                borderColor: '#fff',
+                borderWidth: 2
             }
         }],
-        color: arreglo_colores
+        color: arreglo_colores,
+        animation: true,
+        animationDuration: 1500
     };
 
     graficoCircular.setOption(optionCircular);
+
+    // Responsive handling
+    window.addEventListener('resize', function() {
+        graficoBarras.resize();
+        graficoCircular.resize();
+    });
+
+    // Time selector functionality
+    document.querySelectorAll('.btn-tiempo').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.btn-tiempo').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Aquí puedes agregar la lógica para actualizar los datos según el período seleccionado
+            console.log('Período seleccionado:', this.textContent);
+        });
+    });
 </script>
 
-
+<style>
+    .custom-height {
+        min-height: calc(100vh - 100px);
+    }
+    
+    #graficoBarrasVentasEmpleadoMeses,
+    #graficoCircular {
+        width: 100%;
+        height: 100%;
+        border-radius: 15px;
+    }
+    
+    .contenedor-texto .color-numero {
+        font-size: 3rem !important;
+    }
+</style>
 
 {% endblock %}
