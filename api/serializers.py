@@ -74,6 +74,11 @@ class HistorialSerializer(serializers.ModelSerializer):
         model = Historial
         fields = '__all__'
 
+class TipoRepertorioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoRepertorio
+        fields = '__all__'
+
 class RepertorioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Repertorio

@@ -26,6 +26,7 @@ urlpatterns = [
     path('repertorio_lista/', RepertorioListView.as_view(), name='repertorios_lista'),
     path('detalles_repertorio/', DetalleRepertorioListView.as_view(), name='detallesrepertorio_lista'),
     path('carritos/', CarritoListView.as_view(), name='carritos_lista'),
+    path('tiporepertorio_lista/', TipoRepertorioListView.as_view(), name='tiporepertorio_lista'),
 
     path('crear/<str:model_name>/', CrearObjetoView.as_view(), name='crear_objeto'),
     path('editar/<str:model_name>/<int:pk>/', EditarObjetoView.as_view(), name='editar_objeto'),

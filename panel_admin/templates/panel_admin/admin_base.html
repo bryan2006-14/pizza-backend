@@ -137,7 +137,7 @@
                         <span>Crud Categoría</span>
                     </a>
                 </li>
-                
+
                 <li class="sidebar-item">
                     <a href="{% url 'areas_lista' %}"
                         class="sidebar-link {% if 'areas' in request.path %}active{% endif %}" data-tooltip="Áreas">
@@ -191,14 +191,27 @@
                 </li>
 
                 <li class="sidebar-item">
-                    <a href="{% url 'usuarioadmins_lista' %}" class="sidebar-link {% if 'usuarioadmin' in request.path %}active{% endif %}" data-tooltip="Admins">
+                    <a href="{% url 'usuarioadmins_lista' %}"
+                        class="sidebar-link {% if 'usuarioadmin' in request.path %}active{% endif %}"
+                        data-tooltip="Admins">
                         <i class="fa-solid fa-user-tie"></i>
                         <span>Agregar Admin</span>
                     </a>
                 </li>
 
                 <li class="sidebar-item">
-                    <a href="{% url 'repertorios_lista' %}" class="sidebar-link {% if 'repertorio_lista' in request.path %}active{% endif %}" data-tooltip="Repertorio">
+                    <a href="{% url 'tiporepertorio_lista' %}"
+                        class="sidebar-link {% if 'tiporepertorio' in request.path %}active{% endif %}"
+                        data-tooltip="Tipo Repertorio">
+                        <i class="fa-solid fa-layer-group"></i>
+                        <span>Tipo Repertorio</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{% url 'repertorios_lista' %}"
+                        class="sidebar-link {% if 'repertorio_lista' in request.path %}active{% endif %}"
+                        data-tooltip="Repertorio">
                         <i class="fa-solid fa-ticket"></i>
                         <span>Repertorio</span>
                     </a>
@@ -206,14 +219,18 @@
 
                 <li class="sidebar-item">
                     <!--http://127.0.0.1:8000/panel_admin/detalles_repertorio/-->
-                    <a href="{% url 'detallesrepertorio_lista' %}" class="sidebar-link {% if 'detalles_repertorio' in request.path %}active{% endif %}" data-tooltip="Det. repertorio">
-                        <i class="fa-solid fa-ticket"></i>
-                        <span>Repertorio</span>
+                    <a href="{% url 'detallesrepertorio_lista' %}"
+                        class="sidebar-link {% if 'detalles_repertorio' in request.path %}active{% endif %}"
+                        data-tooltip="Det. repertorio">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <span>Detalles de Repertorio</span>
                     </a>
                 </li>
 
                 <li class="sidebar-item">
-                    <a href="{% url 'carritos_lista' %}" class="sidebar-link {% if 'carritos' in request.path %}active{% endif %}" data-tooltip="Carritos">
+                    <a href="{% url 'carritos_lista' %}"
+                        class="sidebar-link {% if 'carritos' in request.path %}active{% endif %}"
+                        data-tooltip="Carritos">
                         <i class="bi bi-cart"></i>
                         <span>Carritos</span>
                     </a>
@@ -240,22 +257,22 @@
 
     </div>
     <script>
-      function resizeTextToFit() {
-        const containers = document.querySelectorAll('.contenedor-texto');
-        const texts = document.querySelectorAll('.color-numero');
+        function resizeTextToFit() {
+            const containers = document.querySelectorAll('.contenedor-texto');
+            const texts = document.querySelectorAll('.color-numero');
 
-        for (let i = 0; i < containers.length; i++) {
-          const container = containers[i];
-          const text = texts[i];
-          text.style.fontSize = '90px';
-          while (text.scrollWidth > container.clientWidth) {
-            const currentSize = parseFloat(window.getComputedStyle(text).fontSize);
-            text.style.fontSize = (currentSize - 1) + 'px';
-          }
+            for (let i = 0; i < containers.length; i++) {
+                const container = containers[i];
+                const text = texts[i];
+                text.style.fontSize = '90px';
+                while (text.scrollWidth > container.clientWidth) {
+                    const currentSize = parseFloat(window.getComputedStyle(text).fontSize);
+                    text.style.fontSize = (currentSize - 1) + 'px';
+                }
+            }
         }
-      }
-      window.onload = resizeTextToFit;
-      window.onresize = resizeTextToFit;
+        window.onload = resizeTextToFit;
+        window.onresize = resizeTextToFit;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{% static 'panel_admin/js/script.js' %}"></script>

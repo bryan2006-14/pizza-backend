@@ -145,6 +145,13 @@ class Pago(models.Model):
     def __str__(self):
         return f"Pago {self.id_pago} - {self.estado}"
 
+class TipoRepertorio(models.Model):
+    id_tiporepertorio = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.nombre
 class Repertorio(models.Model):
     SERVIDOR_CHOICE = [
         ('android', 'Android'),
@@ -157,7 +164,7 @@ class Repertorio(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_inic = models.DateField()
     fecha_fin = models.DateField()
-    tipo_repertorio = models.CharField(max_length=100)
+    tipo_repertorio = models.ForeignKey(TipoRepertorio, on_delete=models.CASCADE, related_name='repertorios')
     imagen = models.ImageField(upload_to='repertorio/', null=True, blank=True)
     servidor = models.CharField(max_length=50, choices=SERVIDOR_CHOICE)
 
@@ -166,6 +173,8 @@ class Repertorio(models.Model):
 
     def __str__(self):
         return f"{self.id_repertorio} - {self.titulo}"
+    
+
     
 class ProductoVenta(models.Model):
     ESTADO_CHOICE = [

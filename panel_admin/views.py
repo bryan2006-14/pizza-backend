@@ -496,6 +496,11 @@ class ClienteListView(BaseListView):
     model_name = "Clientes"
     campos = ['id_cliente', 'usuario', 'correo', 'telefono']
 
+class TipoRepertorioListView(BaseListView):
+    model = TipoRepertorio
+    model_name = "TipoRepertorio"
+    campos = ['id_tiporepertorio', 'nombre', 'descripcion']
+
 class RepertorioListView(BaseListView):
     model = Repertorio
     model_name = "Repertorios"
@@ -526,6 +531,7 @@ class ModelFactory:
         'pagos': (Pago, PagoForm),
         'historiales': (Historial, HistorialForm),
         'clientes': (Cliente, ClienteForm),
+        'tiporepertorio': (TipoRepertorio, TipoRepertorioForm),
         'repertorios' : (Repertorio, RepertorioForm),
         'usuarioadmins': (UsuarioAdmin, UsuarioAdminForm),
         'detallesrepertorio': (DetalleRepertorio, DetalleRepertorioForm),
@@ -552,7 +558,7 @@ class BaseObjetoView:
 
     def get_success_url(self):
         model_name = self.kwargs["model_name"]
-        return reverse_lazy(f'{model_name}_lista')
+        return reverse_lazy(f'{model_name}_lista') 
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

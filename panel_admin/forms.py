@@ -141,3 +141,8 @@ class CarritoForm(BaseForm):
     class Meta:
         model = Carrito
         fields = ['id_cliente', 'id_proventa']
+
+class TipoRepertorioForm(BaseForm):
+    class Meta:
+        model = TipoRepertorio
+        fields = ['id_tiporepertorio','nombre', 'descripcion']

@@ -125,12 +125,16 @@ WSGI_APPLICATION = 'pizzas.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default='postgresql://happy_pizza_user:9t0g7w5K02JlcmKXavxdehNVcTvv76gl@dpg-d3r6cr0gjchc73bs4lng-a.oregon-postgres.render.com/happy_pizza?sslmode=require',
-        conn_max_age=600,
-        ssl_require=True
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',  # database
+        'USER': 'postgres.enjltqobntrpbnrtlfjj',  # user
+        'PASSWORD': 'Tesis282330',
+        'HOST': 'aws-1-us-east-1.pooler.supabase.com',
+        'PORT': '5432',
+    }
 }
+
 
 
 
@@ -178,6 +182,12 @@ USE_I18N = True
 
 USE_TZ = True
 
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+]
+CORS_ALLOW_CREDENTIALS = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/

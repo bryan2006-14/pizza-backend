@@ -21,6 +21,7 @@ urlpatterns = [
     path('historiales/', HistorialListCreate.as_view(), name='historiales'),
     path('detalles-repertorio/', DetalleRepertorioListCreate.as_view(), name='detalles-repertorio'),
     path('carritos/', CarritoListCreate.as_view(), name='carritos'),
+    path('tiporepertorio/', TipoRepertorioListCreate.as_view(), name='tiporepertorio_lista'),
 
     path('registro/', RegistroView.as_view(), name='registro'),
     path('login/', LoginView.as_view(), name='login'),
@@ -42,6 +43,7 @@ urlpatterns = [
     path('empleados/<str:columna>/<str:valor_a_buscar>/', EmpleadoSearchView.as_view(), name='search-empleado'),
     path('historiales/<str:columna>/<str:valor_a_buscar>/', HistorialSearchView.as_view(), name='search-historial'),
     path('carritos/<str:columna>/<str:valor_a_buscar>/', CarritoSearchView.as_view(), name='search-carrito'),
+    path('tiporepertorio/<str:columna>/<str:valor_a_buscar>/', TipoRepertorioSearchView.as_view(), name='search-tiporepertorio'),
 
     path('api-token-auth/', views.obtain_auth_token),
     path('logout/', LogoutView.as_view(), name='logout'),
