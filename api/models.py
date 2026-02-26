@@ -2,6 +2,8 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
+# ==================== USUARIOS ====================
+
 class UsuarioAdminManager(BaseUserManager):
     def create_user(self, usuario, password=None, **extra_fields):
         if not usuario:
@@ -44,21 +46,27 @@ class UsuarioAdmin(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.usuario
+    
     def has_perm(self, perm, obj=None):
         return True
 
     def has_module_perms(self, app_label):
         return True
 
-class Area(models.Model):
-    id_area = models.AutoField(primary_key=True)
-    nombre_area = models.CharField(max_length=45)
-    descripcion = models.CharField(max_length=300)
+class Cliente(models.Model):
+    id_cliente = models.AutoField(primary_key=True)
+    usuario = models.CharField(max_length=45, unique=True)
+    correo = models.EmailField(max_length=50, unique=True)
+    telefono = models.IntegerField()  # En la imagen es string, podrías cambiarlo a CharField
+    contrasena = models.CharField(max_length=255)
 
     def __str__(self):
-        return  f"{self.id_area} - {self.nombre_area}" 
+        return f"{self.id_cliente} - {self.usuario}"
+    
     class Meta:
-        db_table = 'areas'
+        db_table = 'clientes'
+
+# ==================== NEGOCIO - PRODUCTOS ====================
 
 class Categoria(models.Model):
     id_categoria = models.AutoField(primary_key=True)
@@ -71,22 +79,40 @@ class Categoria(models.Model):
     class Meta:
         db_table = 'categorias'
 
-class Cliente(models.Model):
-    id_cliente = models.AutoField(primary_key=True)
-    usuario = models.CharField(max_length=45, unique=True)
-    correo = models.EmailField(max_length=50, unique=True)
-    telefono = models.IntegerField()
-    contrasena = models.CharField(max_length=255)
+class Producto(models.Model):
+    id_producto = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=45)
+    descripcion = models.CharField(max_length=300)
+    categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, db_column='categoria_id')
+    # imagen no estaba en tu modelo original pero está en la imagen
+    imagen = models.ImageField(upload_to='productos/', null=True, blank=True)
+
+    class Meta:
+        db_table = 'productos'
 
     def __str__(self):
-        return f"{self.id_cliente} - {self.usuario}"
+        return f"{self.id_producto} - {self.nombre}"
+
+class ProductoVariante(models.Model):
     
+    id_variante = models.AutoField(primary_key=True)
+    producto = models.ForeignKey(Producto, on_delete=models.PROTECT, db_column='producto_id', related_name='variantes')
+    tamaño = models.CharField(max_length=100) 
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    stock = models.PositiveIntegerField(default=0)  
+
     class Meta:
-        db_table = 'clientes'
+        db_table = 'productos_variante'
+        unique_together = (('producto', 'tamaño'),)
+
+    def __str__(self):
+        return f"{self.producto.nombre} - {self.tamaño}"
+
+# ==================== NEGOCIO - SUCURSALES Y EMPLEADOS ====================
 
 class Sucursal(models.Model):
     id_sucursal = models.AutoField(primary_key=True)
-    telefono = models.IntegerField()
+    telefono = models.IntegerField()  # En la imagen es string, podrías cambiarlo
     direccion = models.CharField(max_length=45)
     hora_inicio = models.TimeField()
     hora_cierre = models.TimeField()
@@ -97,204 +123,7 @@ class Sucursal(models.Model):
     class Meta:
         db_table = 'sucursales'
 
-class Pedido(models.Model):
-    ESTADO_CHOICE = [
-        ('pedido', 'Pedido'),
-        ('entregado', 'Entregado'),
-        ('devuelto', 'Devuelto'),
-        ('Cancelado', 'Cancelado')
-    ]
-    id_pedido = models.AutoField(primary_key=True)
-    id_sucursal = models.ForeignKey(Sucursal, db_column='id_sucursal',on_delete=models.PROTECT)
-    id_cliente = models.ForeignKey(Cliente, db_column='id_cliente',on_delete=models.PROTECT)
-    fecha_pedido = models.DateTimeField()
-    fecha_entrega = models.DateTimeField()
-    estado = models.CharField(max_length=45, choices=ESTADO_CHOICE)
-    codigo = models.CharField(max_length=45)
-    direccion = models.CharField(max_length=85)
-
-    class Meta:
-        db_table = 'pedidos'
-        unique_together = (('id_pedido', 'id_sucursal'),)
-
-    def __str__(self):
-        return f"Pedido {self.id_pedido} - {self.estado}"
-    
-class Pago(models.Model):
-    ESTADOS_CHOICES = [
-        ('pagado', 'Pagado'),
-        ('deuda', 'Deuda'),
-    ]
-
-    METODO_PAGO_CHOICES = [
-        ('efectivo', 'Efectivo'),
-        ('tarjeta', 'Tarjeta'),
-        ('digital', 'Digital')
-    ]
-
-    id_pago = models.AutoField(primary_key=True)
-    id_pedido = models.OneToOneField(Pedido, db_column='id_pedido', on_delete=models.PROTECT)
-    monto = models.DecimalField(max_digits=10, decimal_places=2)
-    metodo_pago = models.CharField(max_length=45, choices=METODO_PAGO_CHOICES)
-    estado = models.CharField(max_length=45, choices=ESTADOS_CHOICES)
-
-    class Meta:
-        db_table = 'pagos'
-        unique_together = (('id_pago', 'id_pedido'),)
-
-    def __str__(self):
-        return f"Pago {self.id_pago} - {self.estado}"
-
-class TipoRepertorio(models.Model):
-    id_tiporepertorio = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100, unique=True)
-    descripcion = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return self.nombre
-class Repertorio(models.Model):
-    SERVIDOR_CHOICE = [
-        ('android', 'Android'),
-        ('web', 'Web'),
-    ]
-
-    id_repertorio = models.AutoField(primary_key=True)
-    titulo = models.CharField(max_length=60)
-    descripcion = models.CharField(max_length=300)
-    precio = models.DecimalField(max_digits=10, decimal_places=2)
-    fecha_inic = models.DateField()
-    fecha_fin = models.DateField()
-    tipo_repertorio = models.ForeignKey(TipoRepertorio, on_delete=models.CASCADE, related_name='repertorios')
-    imagen = models.ImageField(upload_to='repertorio/', null=True, blank=True)
-    servidor = models.CharField(max_length=50, choices=SERVIDOR_CHOICE)
-
-    class Meta:
-        db_table = 'repertorios'
-
-    def __str__(self):
-        return f"{self.id_repertorio} - {self.titulo}"
-    
-
-    
-class ProductoVenta(models.Model):
-    ESTADO_CHOICE = [
-        ('carrito', 'Carrito'),
-        ('pedido', 'Pedido'),
-    ]
-
-    id_proventa = models.AutoField(primary_key=True)
-    id_repertorio = models.ForeignKey(Repertorio, db_column='id_repertorio', on_delete= models.PROTECT)
-    fecha_estado = models.DateField(auto_now_add=True)
-    estado = models.CharField(max_length=45, choices=ESTADO_CHOICE)
-    codigo = models.CharField(max_length=15)
-
-    class Meta:
-        db_table = 'productos_venta'
-
-    def __str__(self):
-        return f"Prod Venta {self.id_proventa} - {self.id_repertorio} - {self.estado}"
-
-class ProductoPrima(models.Model):
-    id_proprima = models.AutoField(primary_key=True)
-    id_categoria = models.ForeignKey(Categoria, db_column='id_categoria',on_delete=models.PROTECT)
-    nombre = models.CharField(max_length=45)
-    precio = models.DecimalField(max_digits=10, decimal_places=2)
-    tamano = models.CharField(max_length=300)
-    stock = models.PositiveIntegerField()
-
-    class Meta:
-        db_table = 'productos_prima'
-        unique_together = (('id_proprima', 'id_categoria'),)
-
-    def __str__(self):
-        return f"{self.id_proprima} - {self.nombre} - {self.tamano}"
-    
-class DetalleRepertorio(models.Model):
-
-    PRODUCTO_CHOICES = [
-        ('pizza', 'Pizza'),
-        ('lasagna', 'Lasagna'),
-        ('bebida', 'Bebida'),
-        ('agregado', 'Agregado'),
-    ]
-
-    DETALLE_CHOICES = [
-        ('mediana', 'Mediana'),
-        ('grande', 'Grande'),
-        ('personal', 'Personal'),
-        ('familiar', 'Familiar'),
-        ('simple', 'Simple'),
-        ('x', 'X'),
-        ('xl', 'XL'),
-        ('1/2 litro', '1/2 litro'),
-        ('1 litro', '1 litro'),
-        ('10 unidades', '10 unidades'),
-        ('5 unidades', '5 unidades'),
-        ('3 unidades', '3 unidades'),
-    ]
-    
-    PRODUCTO_DETALLE_MAP = {
-        'pizza': ['mediana', 'grande', 'personal', 'familiar'],
-        'lasagna': ['simple', 'x', 'xl'],
-        'bebida': ['1/2 litro', '1 litro'],
-        'agregado': ['10 unidades', '5 unidades', '3 unidades'],
-    }
-    
-    id_detalle_repertorio = models.AutoField(primary_key=True)
-    id_repertorio = models.ForeignKey(Repertorio, db_column='id_repertorio', on_delete=models.PROTECT)
-    id_proprima = models.ForeignKey(ProductoPrima, db_column='id_proprima', on_delete=models.PROTECT, null=True, blank=True)
-    producto = models.CharField(max_length=100, choices=PRODUCTO_CHOICES)
-    unidades = models.PositiveIntegerField()
-    detalle = models.CharField(max_length=200, choices=DETALLE_CHOICES)
-
-    class Meta:
-        db_table = 'detalles_repertorio'
-    
-    def __str__(self):
-        return f"{self.id_detalle_repertorio} - {self.producto}"
-    
-    def clean(self):
-        super().clean()
-        valid_choices = self.PRODUCTO_DETALLE_MAP.get(self.producto.lower())
-        if valid_choices and self.detalle not in valid_choices:
-            raise ValidationError({
-                'detalle': f"El detalle '{self.detalle}' no es válido para el producto '{self.producto}'. Opciones válidas: {', '.join(valid_choices)}"
-            })
-
-
-class DetallePedido(models.Model):
-    id_detalle = models.AutoField(primary_key=True)
-    id_pedido = models.ForeignKey(Pedido, db_column='id_pedido',on_delete=models.PROTECT)
-    id_proventa = models.OneToOneField(ProductoVenta, db_column='id_proventa', on_delete=models.PROTECT)
-    precio = models.DecimalField(max_digits=10, decimal_places=2)
-
-    class Meta:
-        db_table = 'detalles_pedido'
-        unique_together = (('id_detalle', 'id_pedido', 'id_proventa'),)
-
-    def __str__(self):
-        return f"Detalle {self.id_detalle} - Pedido {self.id_pedido}"
-
-class Paquete(models.Model):
-    id_paquete = models.AutoField(primary_key=True)
-    id_proventa = models.ForeignKey(ProductoVenta, db_column='id_proventa',on_delete=models.PROTECT)
-    id_proprima = models.ForeignKey(ProductoPrima, db_column='id_proprima', on_delete=models.PROTECT)
-    cantidad = models.PositiveIntegerField()
-
-    class Meta:
-        db_table = 'paquetes'
-        unique_together = (('id_paquete', 'id_proventa', 'id_proprima'),)
-
-    def __str__(self):
-        return f"Paquete {self.id_paquete}"
-
 class Empleado(models.Model):
-    ESTADO_CHOICES = [
-        ('servicio', 'Servicio'),
-        ('no servicio', 'No Servicio'),
-        ('despedido', "Despedido")
-    ]
-
     CARGO_CHOICES = [
         ('repartidor', 'Repartidor'),
         ('recepcion', 'Recepcion'),
@@ -302,49 +131,195 @@ class Empleado(models.Model):
         ('administrador', 'Administrador')
     ]
 
+    ESTADO_CHOICES = [
+        ('activo', 'Activo'),
+        ('inactivo', 'Inactivo'),
+        ('vacaciones', 'Vacaciones'),
+    ]
+
     id_empleado = models.AutoField(primary_key=True)
-    id_sucursal = models.ForeignKey(Sucursal, db_column='id_sucursal',on_delete=models.PROTECT)
-    id_area = models.ForeignKey(Area, db_column='id_area',on_delete=models.PROTECT)
     nombre = models.CharField(max_length=45)
     apellido = models.CharField(max_length=45)
     cargo = models.CharField(max_length=45, choices=CARGO_CHOICES)
-    estado = models.CharField(max_length=25, choices=ESTADO_CHOICES, default='disponible')
+    estado = models.CharField(max_length=25, choices=ESTADO_CHOICES, default='activo')
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.PROTECT, db_column='sucursal_id')
 
     class Meta:
         db_table = 'empleados'
-        unique_together = (('id_empleado', 'id_sucursal', 'id_area'),)
 
     def __str__(self):
-        return f"{self.id_empleado} - {self.nombre} {self.apellido}"
+        return f"{self.nombre} {self.apellido} - {self.cargo}"
 
 class Historial(models.Model):
     DETALLE_CHOICES = [
-        ('preparacion', 'Preparacion'),
+        ('preparacion', 'Preparación'),
         ('en camino', 'En camino'),
         ('entregando', 'Entregando'),
         ('completado', 'Completado'),
     ]
+    
     id_historial = models.AutoField(primary_key=True)
-    id_empleado = models.ForeignKey(Empleado, db_column='id_empleado',on_delete=models.PROTECT)
-    id_pedido = models.ForeignKey(Pedido, db_column='id_pedido', on_delete=models.PROTECT)
+    empleado = models.ForeignKey(Empleado, on_delete=models.PROTECT, db_column='empleado_id')
+    pedido = models.ForeignKey('Pedido', on_delete=models.PROTECT, db_column='pedido_id')
     detalle = models.CharField(max_length=45, choices=DETALLE_CHOICES)
     fecha = models.DateField()
 
     class Meta:
         db_table = 'historial'
-        unique_together = (('id_historial', 'id_empleado', 'id_pedido'),)
 
     def __str__(self):
-        return f"Historial {self.id_historial} - Pedido {self.id_pedido}"
-    
+        return f"Historial {self.id_historial} - Pedido {self.pedido_id}"
+
+# ==================== PROMOCIONES ====================
+
+class Promocion(models.Model):
+    id_promocion = models.AutoField(primary_key=True)
+    titulo = models.CharField(max_length=60)
+    descripcion = models.CharField(max_length=300)
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    imagen = models.ImageField(upload_to='promociones/', null=True, blank=True)
+
+    class Meta:
+        db_table = 'promociones'
+
+    def __str__(self):
+        return f"{self.id_promocion} - {self.titulo}"
+
+class PromocionDetalle(models.Model):
+    id_detalle = models.AutoField(primary_key=True)
+    promocion = models.ForeignKey(Promocion, on_delete=models.PROTECT, db_column='promocion_id', related_name='detalles')
+    variante = models.ForeignKey(ProductoVariante, on_delete=models.PROTECT, db_column='variante_id')
+    cantidad = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = 'promociones_detalle'
+        unique_together = (('promocion', 'variante'),)
+
+    def __str__(self):
+        return f"Detalle Promo {self.id_detalle}"
+
+# ==================== CARRITO ====================
+
 class Carrito(models.Model):
     id_carrito = models.AutoField(primary_key=True)
-    id_cliente = models.ForeignKey(Cliente, db_column='id_cliente', on_delete=models.PROTECT)
-    id_proventa = models.OneToOneField(ProductoVenta, db_column='id_proventa', on_delete=models.PROTECT)
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, db_column='cliente_id')
     creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'carritos'
     
     def __str__(self):
-        return f"Carrito {self.id_carrito}, cliente {self.id_cliente}"
+        return f"Carrito {self.id_carrito} - Cliente {self.cliente_id}"
+
+class CarritoItem(models.Model):
+    id_item = models.AutoField(primary_key=True)
+    carrito = models.ForeignKey(Carrito, on_delete=models.PROTECT, db_column='carrito_id', related_name='items')
+    variante = models.ForeignKey(ProductoVariante, on_delete=models.PROTECT, db_column='variante_id', null=True, blank=True)
+    promocion = models.ForeignKey(Promocion, on_delete=models.PROTECT, db_column='promocion_id', null=True, blank=True)
+    cantidad = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = 'carritos_item'
+        # Asegurar que solo uno de los dos (variante o promocion) esté presente
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (models.Q(variante__isnull=False) & models.Q(promocion__isnull=True)) |
+                    (models.Q(variante__isnull=True) & models.Q(promocion__isnull=False))
+                ),
+                name='carrito_item_tipo_unico'
+            )
+        ]
+
+    def __str__(self):
+        if self.variante:
+            return f"Item {self.id_item} - {self.variante} x{self.cantidad}"
+        return f"Item {self.id_item} - {self.promocion.titulo} x{self.cantidad}"
+
+# ==================== PEDIDOS ====================
+
+class Pedido(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('confirmado', 'Confirmado'),
+        ('preparando', 'Preparando'),
+        ('en_camino', 'En Camino'),
+        ('entregado', 'Entregado'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    id_pedido = models.AutoField(primary_key=True)
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, db_column='cliente_id')
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.PROTECT, db_column='sucursal_id')
+    fecha_pedido = models.DateTimeField(auto_now_add=True)
+    fecha_entrega = models.DateTimeField(null=True, blank=True)
+    estado = models.CharField(max_length=45, choices=ESTADO_CHOICES, default='pendiente')
+    direccion = models.CharField(max_length=85)
+    codigo = models.CharField(max_length=45, unique=True)
+
+    class Meta:
+        db_table = 'pedidos'
+
+    def __str__(self):
+        return f"Pedido {self.codigo} - {self.estado}"
+
+class PedidoItem(models.Model):
+    id_item = models.AutoField(primary_key=True)
+    pedido = models.ForeignKey(Pedido, on_delete=models.PROTECT, db_column='pedido_id', related_name='items')
+    variante = models.ForeignKey(ProductoVariante, on_delete=models.PROTECT, db_column='variante_id', null=True, blank=True)
+    promocion = models.ForeignKey(Promocion, on_delete=models.PROTECT, db_column='promocion_id', null=True, blank=True)
+    cantidad = models.PositiveIntegerField()
+    precio = models.DecimalField(max_digits=10, decimal_places=2)  # Precio al momento de la compra
+
+    class Meta:
+        db_table = 'pedidos_item'
+        # Asegurar que solo uno de los dos (variante o promocion) esté presente
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (models.Q(variante__isnull=False) & models.Q(promocion__isnull=True)) |
+                    (models.Q(variante__isnull=True) & models.Q(promocion__isnull=False))
+                ),
+                name='pedido_item_tipo_unico'
+            )
+        ]
+
+    def __str__(self):
+        if self.variante:
+            return f"Item {self.id_item} - {self.variante} x{self.cantidad}"
+        return f"Item {self.id_item} - {self.promocion.titulo} x{self.cantidad}"
+
+# ==================== PAGOS ====================
+
+class Pago(models.Model):
+    METODO_PAGO_CHOICES = [
+        ('efectivo', 'Efectivo'),
+        ('tarjeta', 'Tarjeta'),
+        ('transferencia', 'Transferencia'),
+    ]
+
+    ESTADO_PAGO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('completado', 'Completado'),
+        ('fallido', 'Fallido'),
+        ('reembolsado', 'Reembolsado'),
+    ]
+
+    id_pago = models.AutoField(primary_key=True)
+    pedido = models.OneToOneField(Pedido, on_delete=models.PROTECT, db_column='pedido_id', related_name='pago')
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    metodo_pago = models.CharField(max_length=45, choices=METODO_PAGO_CHOICES)
+    estado = models.CharField(max_length=45, choices=ESTADO_PAGO_CHOICES, default='pendiente')
+
+    class Meta:
+        db_table = 'pagos'
+
+    def __str__(self):
+        return f"Pago {self.id_pago} - {self.estado} - ${self.monto}"
+
+# ==================== MODELOS ADICIONALES QUE PODRÍAS ELIMINAR ====================
+# (Estos modelos existían en tu código original pero no están en la imagen)
+# Puedes eliminarlos si ya no los necesitas:
+
+# Area, TipoRepertorio, Repertorio, ProductoVenta, ProductoPrima, 
+# DetalleRepertorio, DetallePedido, Paquete

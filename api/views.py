@@ -6,8 +6,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import *
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from django.apps import apps
+from django.shortcuts import get_object_or_404
 
 from .models import *
 from .serializers import *
@@ -39,16 +40,13 @@ class ListCreateView(generics.ListCreateAPIView):
 
 
 # ====================================================
-# 📋 CRUD PRINCIPALES
+# 📋 CRUD PRINCIPALES - NUEVA ESTRUCTURA
 # ====================================================
 
-class AreaListCreate(ListCreateView):
-    serializer_class = AreaSerializer
-
-
-class CategoriaListCreate(ListCreateView):
-    serializer_class = CategoriaSerializer
-
+# === USUARIOS ===
+class UsuarioAdminListCreate(ListCreateView):
+    serializer_class = UsuarioAdminSerializer
+    permission_classes = [IsAuthenticated]
 
 class ClienteListCreateUpdate(generics.ListCreateAPIView):
     queryset = Cliente.objects.all()
@@ -76,109 +74,186 @@ class ClienteListCreateUpdate(generics.ListCreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# === NEGOCIO - PRODUCTOS ===
+class CategoriaListCreate(ListCreateView):
+    serializer_class = CategoriaSerializer
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+class ProductoListCreate(ListCreateView):
+    serializer_class = ProductoSerializer
+    permission_classes = [AllowAny]
+
+class ProductoVarianteListCreate(ListCreateView):
+    serializer_class = ProductoVarianteSerializer
+    permission_classes = [AllowAny]
+
+
+# === NEGOCIO - SUCURSALES Y EMPLEADOS ===
 class SucursalListCreate(ListCreateView):
     serializer_class = SucursalSerializer
-
-
-class PagoListCreate(ListCreateView):
-    serializer_class = PagoSerializer
-
-
-class PedidoListCreate(ListCreateView):
-    serializer_class = PedidoSerializer
-
-
-class ProductoVentaListCreate(ListCreateView):
-    serializer_class = ProductoVentaSerializer
-
-    def put(self, request, *args, **kwargs):
-        id_proventa = request.data.get('id_proventa', None)
-        if not id_proventa:
-            return Response({"detail": "id_proventa is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            producto = ProductoVenta.objects.get(id_proventa=id_proventa)
-        except ProductoVenta.DoesNotExist:
-            return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = self.get_serializer(producto, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, *args, **kwargs):
-        id_proventa = request.data.get('id_proventa', None)
-        if not id_proventa:
-            return Response({"detail": "id_proventa is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        productos = ProductoVenta.objects.filter(id_proventa=id_proventa)
-        if productos.exists():
-            productos.delete()
-            return Response({"detail": "Producto eliminado exitosamente."}, status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response({"detail": "No hay productos existentes con el id_proventa proporcionado"}, status=status.HTTP_404_NOT_FOUND)
-
-
-class ProductoPrimaListCreate(generics.ListCreateAPIView):
-    queryset = ProductoPrima.objects.all().order_by('id_proprima')  # ✅ campo correcto
-    serializer_class = ProductoPrimaSerializer
-
-
-class DetallePedidoListCreate(ListCreateView):
-    serializer_class = DetallePedidoSerializer
-
-
-class PaqueteListCreate(ListCreateView):
-    serializer_class = PaqueteSerializer
-
-    def delete(self, request, *args, **kwargs):
-        id_proventa = request.data.get('id_proventa', None)
-        if not id_proventa:
-            return Response({"detail": "id_proventa is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        paquetes = Paquete.objects.filter(id_proventa=id_proventa)
-        if paquetes.exists():
-            paquetes.delete()
-            return Response({"detail": "Paquete eliminado exitosamente."}, status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response({"detail": "No hay paquetes existentes con el id_proventa proporcionado."}, status=status.HTTP_404_NOT_FOUND)
-
+    permission_classes = [AllowAny]
 
 class EmpleadoListCreate(ListCreateView):
     serializer_class = EmpleadoSerializer
-
+    permission_classes = [IsAuthenticated]
 
 class HistorialListCreate(ListCreateView):
     serializer_class = HistorialSerializer
+    permission_classes = [IsAuthenticated]
 
 
-class TipoRepertorioListCreate(ListCreateView):
-    serializer_class = TipoRepertorioSerializer
+# === PROMOCIONES ===
+class PromocionListCreate(ListCreateView):
+    serializer_class = PromocionSerializer
+    permission_classes = [AllowAny]
+
+class PromocionDetalleListCreate(ListCreateView):
+    serializer_class = PromocionDetalleSerializer
+    permission_classes = [IsAuthenticated]
 
 
-class RepertorioListCreate(ListCreateView):
-    serializer_class = RepertorioSerializer
-
-
-class DetalleRepertorioListCreate(ListCreateView):
-    serializer_class = DetalleRepertorioSerializer
-
-
-class CarritoListCreate(ListCreateView):
+# === CARRITO ===
+class CarritoListCreate(generics.ListCreateAPIView):
+    queryset = Carrito.objects.all()
     serializer_class = CarritoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filtrar por cliente si se especifica
+        cliente_id = self.request.query_params.get('cliente_id')
+        if cliente_id:
+            return Carrito.objects.filter(cliente_id=cliente_id)
+        return Carrito.objects.all()
+
+class CarritoItemListCreate(generics.ListCreateAPIView):
+    queryset = CarritoItem.objects.all()
+    serializer_class = CarritoItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filtrar por carrito si se especifica
+        carrito_id = self.request.query_params.get('carrito_id')
+        if carrito_id:
+            return CarritoItem.objects.filter(carrito_id=carrito_id)
+        return CarritoItem.objects.all()
 
     def delete(self, request, *args, **kwargs):
-        proventa_id = request.data.get('id_proventa', None)
-        if proventa_id:
+        item_id = request.data.get('id_item')
+        if item_id:
             try:
-                carrito = Carrito.objects.get(id_proventa=proventa_id)
-                carrito.delete()
-                return Response({"message": "Producto quitado del carrito con éxito."}, status=status.HTTP_204_NO_CONTENT)
-            except Carrito.DoesNotExist:
-                return Response({"error": "Producto no encontrado en el carrito."}, status=status.HTTP_404_NOT_FOUND)
+                item = CarritoItem.objects.get(id_item=item_id)
+                item.delete()
+                return Response({"message": "Item eliminado del carrito con éxito."}, status=status.HTTP_204_NO_CONTENT)
+            except CarritoItem.DoesNotExist:
+                return Response({"error": "Item no encontrado en el carrito."}, status=status.HTTP_404_NOT_FOUND)
         else:
-            return Response({"error": "No se proporcionó un id_proventa."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No se proporcionó un id_item."}, status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_create(self, serializer):
+        variante = serializer.validated_data.get('variante')
+        cantidad = serializer.validated_data.get('cantidad', 1)
+        
+        if variante and variante.stock < cantidad:
+            raise ValidationError({
+                'error': f'Stock insuficiente. Solo hay {variante.stock} unidades disponibles.'
+            })
+        
+        serializer.save()
+
+
+# === PEDIDOS ===
+class PedidoListCreate(generics.ListCreateAPIView):
+    queryset = Pedido.objects.all().order_by('-fecha_pedido')
+    serializer_class = PedidoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filtrar por cliente si se especifica
+        cliente_id = self.request.query_params.get('cliente_id')
+        if cliente_id:
+            return Pedido.objects.filter(cliente_id=cliente_id).order_by('-fecha_pedido')
+        return Pedido.objects.all().order_by('-fecha_pedido')
+        
+    def perform_create(self, serializer):
+        pedido = serializer.save()
+        carrito = Carrito.objects.filter(cliente=pedido.cliente, activo=True).first()
+
+        if carrito:
+            items = CarritoItem.objects.filter(carrito=carrito)
+        
+            # Verificar stock de todos los items
+            for item in items:
+                if item.variante and item.variante.stock < item.cantidad:
+                    raise ValidationError(f'Stock insuficiente para {item.variante.producto.nombre} - {item.variante.tamaño}')
+            
+                elif item.promocion:
+                    detalles = PromocionDetalle.objects.filter(promocion=item.promocion)
+                    for detalle in detalles:
+                        if detalle.variante.stock < (detalle.cantidad * item.cantidad):
+                            raise ValidationError(f'Stock insuficiente para promoción {item.promocion.titulo}')
+        
+            # Procesar items y descontar stock
+            for item in items:
+                if item.variante:
+                    # Crear PedidoItem para producto
+                    PedidoItem.objects.create(
+                        pedido=pedido,
+                        variante=item.variante,
+                        cantidad=item.cantidad,
+                        precio=item.variante.precio
+                    )
+                    # Descontar stock
+                    item.variante.stock -= item.cantidad
+                    item.variante.save()
+            
+                elif item.promocion:
+                    # Crear PedidoItem para promoción
+                    PedidoItem.objects.create(
+                        pedido=pedido,
+                        promocion=item.promocion,
+                        cantidad=item.cantidad,
+                        precio=item.promocion.precio
+                    )
+                    
+                    # Descontar stock de cada detalle de la promoción
+                    detalles = PromocionDetalle.objects.filter(promocion=item.promocion)
+                    for detalle in detalles:
+                        cantidad_total = detalle.cantidad * item.cantidad
+                        detalle.variante.stock -= cantidad_total
+                        detalle.variante.save()
+        
+            # Vaciar carrito
+            items.delete()
+            carrito.delete()
+
+class PedidoItemListCreate(generics.ListCreateAPIView):
+    queryset = PedidoItem.objects.all()
+    serializer_class = PedidoItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filtrar por pedido si se especifica
+        pedido_id = self.request.query_params.get('pedido_id')
+        if pedido_id:
+            return PedidoItem.objects.filter(pedido_id=pedido_id)
+        return PedidoItem.objects.all()
+
+
+# === PAGOS ===
+class PagoListCreate(ListCreateView):
+    serializer_class = PagoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filtrar por pedido si se especifica
+        pedido_id = self.request.query_params.get('pedido_id')
+        if pedido_id:
+            return Pago.objects.filter(pedido_id=pedido_id)
+        return Pago.objects.all()
 
 
 # ====================================================
@@ -317,22 +392,21 @@ class DynamicSearchView(generics.GenericAPIView):
 
     def get_serializer_class(self, model_name):
         mapping = {
-            'Area': AreaSerializer,
+            'UsuarioAdmin': UsuarioAdminSerializer,
             'Cliente': ClienteSerializer,
             'Categoria': CategoriaSerializer,
+            'Producto': ProductoSerializer,
+            'ProductoVariante': ProductoVarianteSerializer,
             'Sucursal': SucursalSerializer,
-            'Pedido': PedidoSerializer,
-            'Pago': PagoSerializer,
-            'TipoRepertorio': TipoRepertorioSerializer,
-            'Repertorio': RepertorioSerializer,
-            'DetalleRepertorio': DetalleRepertorioSerializer,
-            'ProductoVenta': ProductoVentaSerializer,
-            'ProductoPrima': ProductoPrimaSerializer,
-            'DetallePedido': DetallePedidoSerializer,
-            'Paquete': PaqueteSerializer,
             'Empleado': EmpleadoSerializer,
             'Historial': HistorialSerializer,
+            'Promocion': PromocionSerializer,
+            'PromocionDetalle': PromocionDetalleSerializer,
             'Carrito': CarritoSerializer,
+            'CarritoItem': CarritoItemSerializer,
+            'Pedido': PedidoSerializer,
+            'PedidoItem': PedidoItemSerializer,
+            'Pago': PagoSerializer,
         }
         if model_name not in mapping:
             raise LookupError("Serializador sin definir para este modelo.")
@@ -343,84 +417,65 @@ class DynamicSearchView(generics.GenericAPIView):
 
 
 # ====================================================
-# 🔎 VISTAS DE BÚSQUEDA ESPECÍFICAS
+# 🔎 VISTAS DE BÚSQUEDA ESPECÍFICAS - NUEVA ESTRUCTURA
 # ====================================================
 
-class AreaSearchView(DynamicSearchView):
+class UsuarioAdminSearchView(DynamicSearchView):
     def get_model_name(self):
-        return 'Area'
-
+        return 'UsuarioAdmin'
 
 class ClienteSearchView(DynamicSearchView):
     def get_model_name(self):
         return 'Cliente'
 
-
 class CategoriaSearchView(DynamicSearchView):
     def get_model_name(self):
         return 'Categoria'
 
+class ProductoSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'Producto'
+
+class ProductoVarianteSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'ProductoVariante'
 
 class SucursalSearchView(DynamicSearchView):
     def get_model_name(self):
         return 'Sucursal'
 
-
-class PedidoSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'Pedido'
-
-
-class PagoSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'Pago'
-
-
-class TipoRepertorioSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'TipoRepertorio'
-
-
-class RepertorioSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'Repertorio'
-
-
-class DetalleRepertorioSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'DetalleRepertorio'
-
-
-class ProductoVentaSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'ProductoVenta'
-
-
-class ProductoPrimaSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'ProductoPrima'
-
-
-class DetallePedidoSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'DetallePedido'
-
-
-class PaqueteSearchView(DynamicSearchView):
-    def get_model_name(self):
-        return 'Paquete'
-
-
 class EmpleadoSearchView(DynamicSearchView):
     def get_model_name(self):
         return 'Empleado'
-
 
 class HistorialSearchView(DynamicSearchView):
     def get_model_name(self):
         return 'Historial'
 
+class PromocionSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'Promocion'
+
+class PromocionDetalleSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'PromocionDetalle'
 
 class CarritoSearchView(DynamicSearchView):
     def get_model_name(self):
         return 'Carrito'
+
+class CarritoItemSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'CarritoItem'
+
+class PedidoSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'Pedido'
+
+class PedidoItemSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'PedidoItem'
+
+class PagoSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'Pago'

@@ -93,7 +93,7 @@
                     </a>
                     <ul id="sucursales" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
                         <li class="sidebar-item">
-                            <a href="{% url 'admin_surcursales' %}" class="sidebar-link">Info Sucursal</a>
+                            <a href="{% url 'admin_sucursales' %}" class="sidebar-link">Info Sucursal</a>
                         </li>
                         <li class="sidebar-item">
                             <a href="{% url 'sucursales_lista' %}" class="sidebar-link">Crud Sucursal</a>
@@ -103,30 +103,23 @@
 
                 <li class="sidebar-item">
                     <a href="#"
-                        class="sidebar-link collapsed has-dropdown {% if 'productosprima' in request.path %}active{% endif %}"
-                        data-bs-toggle="collapse" data-bs-target="#productos-prima" aria-expanded="false"
-                        aria-controls="productos-prima" data-tooltip="Productos Prima">
-                        <i class="fa-solid fa-jar"></i>
-                        <span>Productos Prima</span>
+                        class="sidebar-link collapsed has-dropdown {% if 'productos' in request.path and not 'productos_lista' in request.path %}active{% endif %}"
+                        data-bs-toggle="collapse" data-bs-target="#productos" aria-expanded="false"
+                        aria-controls="productos" data-tooltip="Productos">
+                        <i class="fa-solid fa-pizza-slice"></i>
+                        <span>Productos</span>
                     </a>
-
-                    <ul id="productos-prima" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
+                    <ul id="productos" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
                         <li class="sidebar-item">
-                            <a href="{% url 'admin_productosprima' %}" class="sidebar-link">Info Productos Prima</a>
+                            <a href="{% url 'admin_productos' %}" class="sidebar-link">Info Productos</a>
                         </li>
                         <li class="sidebar-item">
-                            <a href="{% url 'productosprima_lista' %}" class="sidebar-link">Crud Productos Prima</a>
+                            <a href="{% url 'productos_lista' %}" class="sidebar-link">Crud Productos</a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="{% url 'productosvariantes_lista' %}" class="sidebar-link">Crud Variantes</a>
                         </li>
                     </ul>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'productosventa_lista' %}"
-                        class="sidebar-link collapsed has-dropdown {% if 'productosventa' in request.path %}active{% endif %}"
-                        data-tooltip="Productos Venta">
-                        <i class="fa-solid fa-pizza-slice"></i>
-                        <span>Productos Venta</span>
-                    </a>
                 </li>
 
                 <li class="sidebar-item">
@@ -134,48 +127,49 @@
                         class="sidebar-link {% if 'categoria' in request.path %}active{% endif %}"
                         data-tooltip="Categorías">
                         <i class="fa-solid fa-bookmark"></i>
-                        <span>Crud Categoría</span>
+                        <span>Categorías</span>
                     </a>
                 </li>
 
                 <li class="sidebar-item">
-                    <a href="{% url 'areas_lista' %}"
-                        class="sidebar-link {% if 'areas' in request.path %}active{% endif %}" data-tooltip="Áreas">
-                        <i class="bi bi-person-lines-fill"></i>
-                        <span>Áreas</span>
+                    <a href="#"
+                        class="sidebar-link collapsed has-dropdown {% if 'promociones' in request.path %}active{% endif %}"
+                        data-bs-toggle="collapse" data-bs-target="#promociones" aria-expanded="false"
+                        aria-controls="promociones" data-tooltip="Promociones">
+                        <i class="fa-solid fa-star"></i>
+                        <span>Promociones</span>
                     </a>
-                </li>
-
-
-                <li class="sidebar-item">
-                    <a href="{% url 'paquetes_lista' %}"
-                        class="sidebar-link {% if 'paquetes' in request.path %}active{% endif %}"
-                        data-tooltip="Paquetes">
-                        <i class="fa-solid fa-box"></i>
-                        <span>Paquetes</span>
-                    </a>
+                    <ul id="promociones" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
+                        <li class="sidebar-item">
+                            <a href="{% url 'promociones_lista' %}" class="sidebar-link">Crud Promociones</a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="{% url 'promocionesdetalle_lista' %}" class="sidebar-link">Crud Detalle Promos</a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="sidebar-item">
                     <a href="{% url 'pedidos_lista' %}"
-                        class="sidebar-link {% if 'pedidos' in request.path %}active{% endif %}" data-tooltip="Pedidos">
+                        class="sidebar-link {% if 'pedidos_lista' in request.path %}active{% endif %}"
+                        data-tooltip="Pedidos">
                         <i class="bi bi-bag-fill"></i>
                         <span>Pedidos</span>
                     </a>
                 </li>
 
                 <li class="sidebar-item">
-                    <a href="{% url 'detallepedido_lista' %}"
-                        class="sidebar-link {% if 'detallepedido' in request.path %}active{% endif %}"
-                        data-tooltip="Det Pedidos">
+                    <a href="{% url 'pedidositems_lista' %}"
+                        class="sidebar-link {% if 'pedidositems_lista' in request.path %}active{% endif %}"
+                        data-tooltip="Items de Pedidos">
                         <i class="bi bi-bag-plus-fill"></i>
-                        <span>Detalles pedido</span>
+                        <span>Items de Pedidos</span>
                     </a>
                 </li>
 
                 <li class="sidebar-item">
                     <a href="{% url 'pagos_lista' %}"
-                        class="sidebar-link {% if 'pago' in request.path %}active{% endif %}" data-tooltip="Pagos">
+                        class="sidebar-link {% if 'pagos' in request.path %}active{% endif %}" data-tooltip="Pagos">
                         <i class="fa-solid fa-coins"></i>
                         <span>Pagos</span>
                     </a>
@@ -200,40 +194,21 @@
                 </li>
 
                 <li class="sidebar-item">
-                    <a href="{% url 'tiporepertorio_lista' %}"
-                        class="sidebar-link {% if 'tiporepertorio' in request.path %}active{% endif %}"
-                        data-tooltip="Tipo Repertorio">
-                        <i class="fa-solid fa-layer-group"></i>
-                        <span>Tipo Repertorio</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'repertorios_lista' %}"
-                        class="sidebar-link {% if 'repertorio_lista' in request.path %}active{% endif %}"
-                        data-tooltip="Repertorio">
-                        <i class="fa-solid fa-ticket"></i>
-                        <span>Repertorio</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <!--http://127.0.0.1:8000/panel_admin/detalles_repertorio/-->
-                    <a href="{% url 'detallesrepertorio_lista' %}"
-                        class="sidebar-link {% if 'detalles_repertorio' in request.path %}active{% endif %}"
-                        data-tooltip="Det. repertorio">
-                        <i class="fa-solid fa-clipboard-list"></i>
-                        <span>Detalles de Repertorio</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'carritos_lista' %}"
-                        class="sidebar-link {% if 'carritos' in request.path %}active{% endif %}"
-                        data-tooltip="Carritos">
+                    <a href="#"
+                        class="sidebar-link collapsed has-dropdown {% if 'carritos' in request.path %}active{% endif %}"
+                        data-bs-toggle="collapse" data-bs-target="#carritos" aria-expanded="false"
+                        aria-controls="carritos" data-tooltip="Carritos">
                         <i class="bi bi-cart"></i>
                         <span>Carritos</span>
                     </a>
+                    <ul id="carritos" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
+                        <li class="sidebar-item">
+                            <a href="{% url 'carritos_lista' %}" class="sidebar-link">Listado Carritos</a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="{% url 'carritositems_lista' %}" class="sidebar-link">Items en Carritos</a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="sidebar-item">

@@ -1,0 +1,98 @@
+{% extends 'panel_admin/admin_base.html' %}
+
+{% block titulo %}Admin - Productos y Promociones{% endblock %}
+
+{% block contenido %}
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-9 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Productos más vendidos</h3>
+            <div id="graficoProductosMasVendidos" class="flex-grow-1 contenedor-grafico"></div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Total de Productos</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ total_productos }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row custom-height mx-0 py-2">
+    <div class="col-lg-9 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Promociones más vendidas</h3>
+            <div id="graficoPromocionesMasVendidas" class="flex-grow-1 contenedor-grafico"></div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-12 pt-3">
+        <div class="box d-flex flex-column h-100">
+            <h3 class="text-center py-3 px-1">Total de Promociones</h3>
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center contenedor-texto">
+                <p class="color-numero">{{ total_promociones }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const chartDataProductos = {{ productos_mas_vendidos| safe }};
+    const nombresProductos = chartDataProductos.map(item => item[0]);
+    const cantidadesProductos = chartDataProductos.map(item => item[1]);
+    const arreglo_colores = ["#FF6787", "#FFB68C", "#B6D3E2", "#97ED97", "#55CBD3", "#D18BC0", "#F9D877", "#FE8E7B", "#C7EEFF", "#6384B3"];
+
+    if (document.getElementById('graficoProductosMasVendidos')) {
+        const graficoProductos = echarts.init(document.getElementById('graficoProductosMasVendidos'));
+        const optionProductos = {
+            tooltip: {},
+            xAxis: {
+                type: 'category',
+                data: nombresProductos
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [{
+                name: 'Ventas',
+                type: 'bar',
+                data: cantidadesProductos,
+                itemStyle: {
+                    color: (params) => arreglo_colores[params.dataIndex % arreglo_colores.length]
+                }
+            }]
+        };
+        graficoProductos.setOption(optionProductos);
+    }
+
+    const chartDataPromociones = {{ promociones_mas_vendidas| safe }};
+    const nombresPromociones = chartDataPromociones.map(item => item[0]);
+    const cantidadesPromociones = chartDataPromociones.map(item => item[1]);
+
+    if (document.getElementById('graficoPromocionesMasVendidas')) {
+        const graficoPromociones = echarts.init(document.getElementById('graficoPromocionesMasVendidas'));
+        const optionPromociones = {
+            tooltip: {},
+            xAxis: {
+                type: 'category',
+                data: nombresPromociones
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [{
+                name: 'Ventas',
+                type: 'bar',
+                data: cantidadesPromociones,
+                itemStyle: {
+                    color: (params) => arreglo_colores[(params.dataIndex + 3) % arreglo_colores.length]
+                }
+            }]
+        };
+        graficoPromociones.setOption(optionPromociones);
+    }
+</script>
+{% endblock %}

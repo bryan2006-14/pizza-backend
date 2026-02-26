@@ -5,11 +5,11 @@
 {% block titulo %}Listado {{ model_name }}{% endblock %}
 
 {% block contenido %}
-    <div class="m-3">
-        <h2>Listado de {{ model_name|capfirst }}</h2>
+<div class="m-3">
+    <h2>Listado de {{ model_name|capfirst }}</h2>
 
     <div class="mb-3">
-        <a href="{% url 'crear_objeto' model_name=model_name|lower %}" class="btn btn-success">
+        <a href="{% url 'crear_objeto' model_name=model_url_name %}" class="btn btn-success">
             <i class="bi bi-plus-circle-fill me-2"></i>
             Añadir {{ model_name }}
         </a>
@@ -21,9 +21,15 @@
             <select name="campo" id="campo" class="form-select">
                 <option value="">-- Seleccione una columna --</option>
                 {% for campo in campos %}
-                    <option value="{{ campo }}" {% if request.GET.campo == campo %}selected{% endif %}>
-                        {{ campo|capfirst }}
-                    </option>
+                {% if request.GET.campo == campo %}
+                <option value="{{ campo }}" selected>
+                    {{ campo|capfirst }}
+                </option>
+                {% else %}
+                <option value="{{ campo }}">
+                    {{ campo|capfirst }}
+                </option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
@@ -37,96 +43,101 @@
     <p class="text-muted">
         Cantidad de registros: {{ cantidad_filtrada }}
         {% if cantidad_filtrada != cantidad_original %}
-            (de un total de {{ cantidad_original }})
+        (de un total de {{ cantidad_original }})
         {% endif %}
-    </p>  
-    
+    </p>
+
 
     {% if page_obj %}
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        {% for campo in campos %}
-                        <th>{{ campo|capfirst }}</th>
-                        {% endfor %}
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for objeto in page_obj %}
-                    <tr>
-                        {% for campo in campos %}
-                        <td>
-                            {% if campo == 'imagen' and objeto.imagen %}
-                                <img src="{{ objeto.imagen.url }}" alt="{{ objeto.nombre }}" style="height: 35px;">
-                            {% else %}
-                                {{ objeto|getattribute:campo }}
-                            {% endif %}
-                        </td>
-                        {% endfor %}
-                        <td>
-                            <a href="{% url 'editar_objeto' model_name=model_name|lower pk=objeto.pk %}" class="btn btn-sm btn-warning">
-                                <i class="bi bi-pencil-square me-2"></i>
-                                Editar
-                            </a>
-                            <form action="{% url 'eliminar_objeto' model_name=model_name|lower pk=objeto.pk %}" method="post" style="display:inline;" id="form-eliminar-{{ objeto.pk }}">
-                                {% csrf_token %}
-                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmarEliminacion({{ objeto.pk }})">
-                                    <i class="bi bi-trash3 me-2"></i>
-                                    Eliminar
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    {% for campo in campos %}
+                    <th>{{ campo|capfirst }}</th>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if page_obj.has_other_pages %}
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1">Primera</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}"><i class="bi bi-arrow-left me-1"></i>Anterior</a>
-                        </li>
-                    {% endif %}
-
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active" aria-current="page">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for objeto in page_obj %}
+                <tr>
+                    {% for campo in campos %}
+                    <td>
+                        {% if campo == 'imagen' and objeto.imagen %}
+                        <img src="{{ objeto.imagen.url }}" alt="{{ objeto.nombre }}" style="height: 35px;">
                         {% else %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                            </li>
+                        {{ objeto|getattribute:campo }}
                         {% endif %}
+                    </td>
                     {% endfor %}
-
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente<i class="bi bi-arrow-right ms-1"></i></a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
-        
-    {% else %}
-        <p>No hay registros</p>
-    {% endif %}
-    
+                    <td>
+                        <a href="{% url 'editar_objeto' model_name=model_url_name pk=objeto.pk %}"
+                            class="btn btn-sm btn-warning">
+                            <i class="bi bi-pencil-square me-2"></i>
+                            Editar
+                        </a>
+                        <form action="{% url 'eliminar_objeto' model_name=model_url_name pk=objeto.pk %}" method="post"
+                            style="display:inline;" id="form-eliminar-{{ objeto.pk }}">
+                            {% csrf_token %}
+                            <button type="button" class="btn btn-sm btn-danger"
+                                onclick="confirmarEliminacion('{{ objeto.pk }}')">
+                                <i class="bi bi-trash3 me-2"></i>
+                                Eliminar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    
-    <script>
+
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">Primera</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}"><i
+                        class="bi bi-arrow-left me-1"></i>Anterior</a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% else %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente<i
+                        class="bi bi-arrow-right ms-1"></i></a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <p>No hay registros</p>
+    {% endif %}
+
+</div>
+
+<script>
     function confirmarEliminacion(objetoId) {
         Swal.fire({
             title: '¿Estás seguro?',
@@ -144,12 +155,12 @@
         });
     }
 
-    $(document).ready(function() {
+    $(document).ready(function () {
         {% if messages %}
-            {% for message in messages %}
-                toastr.{{ message.tags }}("{{ message }}");
-            {% endfor %}
+        {% for message in messages %}
+        toastr.{ { message.tags } } ("{{ message }}");
+        {% endfor %}
         {% endif %}
     });
-    </script>
+</script>
 {% endblock %}

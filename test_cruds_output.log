@@ -1,0 +1,34 @@
+
+--- TEST LIST VIEWS ---
+[OK] usuarioadmins_lista
+[OK] clientes_lista
+[OK] categorias_lista
+[OK] productos_lista
+[OK] productosvariantes_lista
+[OK] sucursales_lista
+[OK] empleados_lista
+[OK] historial_lista
+[OK] promociones_lista
+[OK] promocionesdetalle_lista
+[OK] carritos_lista
+[OK] carritositems_lista
+[OK] pedidos_lista
+[OK] pedidositems_lista
+[OK] pagos_lista
+
+--- TEST CREATE VIEWS ---
+[OK] crear usuarioadmins
+[OK] crear clientes
+[OK] crear categorias
+[OK] crear productos
+[OK] crear productosvariantes
+[OK] crear sucursales
+[OK] crear empleados
+[OK] crear historial
+[OK] crear promociones
+[OK] crear promocionesdetalle
+[OK] crear carritos
+[OK] crear carritositems
+[OK] crear pedidos
+[OK] crear pedidositems
+[OK] crear pagos
