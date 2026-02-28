@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     UsuarioAdmin, Cliente, Categoria, Producto, ProductoVariante,
-    Sucursal, Empleado, Historial, Promocion, PromocionDetalle,
+    Sucursal, InventarioSucursal, Empleado, Historial, Promocion, PromocionDetalle,
     Carrito, CarritoItem, Pedido, PedidoItem, Pago
 )
 
@@ -43,17 +43,20 @@ class ProductoAdmin(admin.ModelAdmin):
 
 @admin.register(ProductoVariante)
 class ProductoVarianteAdmin(admin.ModelAdmin):
-    list_display = ('id_variante', 'producto', 'tamaño', 'precio', 'stock')
+    list_display = ('id_variante', 'producto', 'tamaño', 'precio')
     list_filter = ('tamaño', 'producto__categoria')
     search_fields = ('producto__nombre',)
-    list_editable = ('stock',)
 
 # ==================== NEGOCIO - SUCURSALES Y EMPLEADOS ====================
 
-@admin.register(Sucursal)
-class SucursalAdmin(admin.ModelAdmin):
-    list_display = ('id_sucursal', 'direccion', 'telefono', 'hora_inicio', 'hora_cierre')
     search_fields = ('direccion',)
+
+@admin.register(InventarioSucursal)
+class InventarioSucursalAdmin(admin.ModelAdmin):
+    list_display = ('id_inventario', 'sucursal', 'variante', 'stock')
+    list_filter = ('sucursal', 'variante__producto__categoria')
+    search_fields = ('variante__producto__nombre', 'sucursal__direccion')
+    list_editable = ('stock',)
 
 @admin.register(Empleado)
 class EmpleadoAdmin(admin.ModelAdmin):

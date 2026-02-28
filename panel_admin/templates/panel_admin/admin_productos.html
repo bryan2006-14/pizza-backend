@@ -39,6 +39,54 @@
     </div>
 </div>
 
+<div class="row mx-0 py-2">
+    <div class="col-12 pt-3">
+        <div class="box p-3">
+            <h3 class="text-center py-3 px-1"><i class="fa-solid fa-triangle-exclamation text-warning"></i> Alertas de
+                Stock Bajo</h3>
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Tamaño</th>
+                            <th>Sucursal</th>
+                            <th class="text-center">Stock Actual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sb in stock_bajo %}
+                        <tr>
+                            <td>{{ sb.variante__producto__nombre }}</td>
+                            <td>{{ sb.variante__tamaño }}</td>
+                            <td class="text-muted"><i class="fa-solid fa-location-dot"></i> {{ sb.sucursal__direccion }}
+                            </td>
+                            <td class="text-center">
+                                <span
+                                    class="badge {% if sb.stock == 0 %}bg-danger{% else %}bg-warning text-dark{% endif %} fs-6 px-3">
+                                    {{ sb.stock }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-success py-4">
+                                <i class="fa-solid fa-check-circle"></i> Todo el inventario está al día.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-end pt-3">
+                <a href="{% url 'inventariossucursal_lista' %}" class="btn btn-outline-danger btn-sm">
+                    Ver Inventario Completo <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     const chartDataProductos = {{ productos_mas_vendidos| safe }};
     const nombresProductos = chartDataProductos.map(item => item[0]);

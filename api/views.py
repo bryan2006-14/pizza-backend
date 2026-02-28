@@ -101,6 +101,10 @@ class EmpleadoListCreate(ListCreateView):
     serializer_class = EmpleadoSerializer
     permission_classes = [IsAuthenticated]
 
+class InventarioSucursalListCreate(ListCreateView):
+    serializer_class = InventarioSucursalSerializer
+    permission_classes = [AllowAny] # O IsAuthenticated dependiendo de tu flujo
+
 class HistorialListCreate(ListCreateView):
     serializer_class = HistorialSerializer
     permission_classes = [IsAuthenticated]
@@ -154,14 +158,7 @@ class CarritoItemListCreate(generics.ListCreateAPIView):
             return Response({"error": "No se proporcionó un id_item."}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
-        variante = serializer.validated_data.get('variante')
-        cantidad = serializer.validated_data.get('cantidad', 1)
-        
-        if variante and variante.stock < cantidad:
-            raise ValidationError({
-                'error': f'Stock insuficiente. Solo hay {variante.stock} unidades disponibles.'
-            })
-        
+        # Stock check no longer valid globally, handled during Pedido creation per branch
         serializer.save()
 
 
@@ -179,56 +176,61 @@ class PedidoListCreate(generics.ListCreateAPIView):
         return Pedido.objects.all().order_by('-fecha_pedido')
         
     def perform_create(self, serializer):
+        # El guardado del pedido ahora disparará la creación de PedidoItems,
+        # los cuales tienen la lógica de descuento de stock en su método save()
         pedido = serializer.save()
-        carrito = Carrito.objects.filter(cliente=pedido.cliente, activo=True).first()
+        
+        # Opcional: Si tienes un carrito activo para este cliente, procesamos sus items
+        # Nota: Asegúrate de que el carrito tenga un campo 'activo' o maneja la lógica según tu app
+        carrito = Carrito.objects.filter(cliente=pedido.cliente).last()
 
         if carrito:
             items = CarritoItem.objects.filter(carrito=carrito)
-        
-            # Verificar stock de todos los items
-            for item in items:
-                if item.variante and item.variante.stock < item.cantidad:
-                    raise ValidationError(f'Stock insuficiente para {item.variante.producto.nombre} - {item.variante.tamaño}')
             
-                elif item.promocion:
-                    detalles = PromocionDetalle.objects.filter(promocion=item.promocion)
-                    for detalle in detalles:
-                        if detalle.variante.stock < (detalle.cantidad * item.cantidad):
-                            raise ValidationError(f'Stock insuficiente para promoción {item.promocion.titulo}')
-        
-            # Procesar items y descontar stock
+            # Verificación de stock por sucursal
             for item in items:
                 if item.variante:
-                    # Crear PedidoItem para producto
+                    inv = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=item.variante).first()
+                    stock_actual = inv.stock if inv else 0
+                    if stock_actual < item.cantidad:
+                        raise ValidationError({'error': f'Stock insuficiente en esta sucursal para {item.variante.producto.nombre}'})
+                
+                elif item.promocion:
+                    # Verificar stock de items fijos de la promo en esta sucursal
+                    detalles_fijos = PromocionDetalle.objects.filter(promocion=item.promocion, variante__isnull=False)
+                    for detalle in detalles_fijos:
+                        inv = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=detalle.variante).first()
+                        stock_actual = inv.stock if inv else 0
+                        if stock_actual < (detalle.cantidad * item.cantidad):
+                            raise ValidationError({'error': f'Stock insuficiente en esta sucursal para item de promo: {detalle.variante.producto.nombre}'})
+            
+            # Crear PedidoItems (esto ejecutará PedidoItem.save() que descuenta el stock)
+            for item in items:
+                if item.variante:
                     PedidoItem.objects.create(
                         pedido=pedido,
                         variante=item.variante,
                         cantidad=item.cantidad,
                         precio=item.variante.precio
                     )
-                    # Descontar stock
-                    item.variante.stock -= item.cantidad
-                    item.variante.save()
-            
                 elif item.promocion:
-                    # Crear PedidoItem para promoción
-                    PedidoItem.objects.create(
+                    pedido_item = PedidoItem.objects.create(
                         pedido=pedido,
                         promocion=item.promocion,
                         cantidad=item.cantidad,
                         precio=item.promocion.precio
                     )
-                    
-                    # Descontar stock de cada detalle de la promoción
-                    detalles = PromocionDetalle.objects.filter(promocion=item.promocion)
-                    for detalle in detalles:
-                        cantidad_total = detalle.cantidad * item.cantidad
-                        detalle.variante.stock -= cantidad_total
-                        detalle.variante.save()
+                    # Copiar opciones del carrito al pedido
+                    for opcion in item.opciones_promocion.all():
+                        PedidoItemOpcion.objects.create(
+                            pedido_item=pedido_item,
+                            variante=opcion.variante,
+                            cantidad=opcion.cantidad
+                        )
         
-            # Vaciar carrito
+            # Limpiar carrito
             items.delete()
-            carrito.delete()
+            # carrito.delete() # Opcional si quieres borrar el carrito entero o solo vaciarlo
 
 class PedidoItemListCreate(generics.ListCreateAPIView):
     queryset = PedidoItem.objects.all()
@@ -406,6 +408,7 @@ class DynamicSearchView(generics.GenericAPIView):
             'CarritoItem': CarritoItemSerializer,
             'Pedido': PedidoSerializer,
             'PedidoItem': PedidoItemSerializer,
+            'InventarioSucursal': InventarioSucursalSerializer,
             'Pago': PagoSerializer,
         }
         if model_name not in mapping:
@@ -475,6 +478,10 @@ class PedidoSearchView(DynamicSearchView):
 class PedidoItemSearchView(DynamicSearchView):
     def get_model_name(self):
         return 'PedidoItem'
+
+class InventarioSucursalSearchView(DynamicSearchView):
+    def get_model_name(self):
+        return 'InventarioSucursal'
 
 class PagoSearchView(DynamicSearchView):
     def get_model_name(self):

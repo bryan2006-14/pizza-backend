@@ -310,10 +310,10 @@ def vista_admin_productos(request):
         .values_list('promocion__titulo', 'total_vendido')
     )
 
-    # 🔥 NUEVO: Productos con stock bajo
+    # 🔥 NUEVO: Productos con stock bajo (Tomando de todas las sucursales)
     stock_bajo = list(
-        ProductoVariante.objects.filter(stock__lt=10)
-        .values('producto__nombre', 'tamaño', 'stock')
+        InventarioSucursal.objects.filter(stock__lt=10)
+        .values('variante__producto__nombre', 'variante__tamaño', 'stock', 'sucursal__direccion')
         .order_by('stock')[:10]
     )
 
@@ -431,13 +431,19 @@ class ProductoVarianteListView(BaseListView):
     model = ProductoVariante
     model_name = "Variantes de Productos"
     model_url_name = "productosvariantes"
-    campos = ['id_variante', 'producto', 'tamaño', 'precio', 'stock']
+    campos = ['id_variante', 'producto', 'tamaño', 'precio']
 
 class SucursalListView(BaseListView):
     model = Sucursal
     model_name = "Sucursales"
     model_url_name = "sucursales"
     campos = ['id_sucursal', 'direccion', 'telefono', 'hora_inicio', 'hora_cierre']
+
+class InventarioSucursalListView(BaseListView):
+    model = InventarioSucursal
+    model_name = "Inventario por Sucursales"
+    model_url_name = "inventariossucursal"
+    campos = ['id_inventario', 'sucursal', 'variante', 'stock']
 
 class EmpleadoListView(BaseListView):
     model = Empleado
@@ -505,6 +511,7 @@ class ModelFactory:
         'productos': (Producto, ProductoForm),
         'productosvariantes': (ProductoVariante, ProductoVarianteForm),
         'sucursales': (Sucursal, SucursalForm),
+        'inventariossucursal': (InventarioSucursal, InventarioSucursalForm),
         'empleados': (Empleado, EmpleadoForm),
         'historial': (Historial, HistorialForm),
         'promociones': (Promocion, PromocionForm),

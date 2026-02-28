@@ -62,7 +62,7 @@ class ProductoForm(BaseForm):
 class ProductoVarianteForm(BaseForm):
     class Meta:
         model = ProductoVariante
-        fields = ['producto', 'tamaño', 'precio', 'stock']
+        fields = ['producto', 'tamaño', 'precio']
 
 # ==================== NEGOCIO - SUCURSALES Y EMPLEADOS ====================
 
@@ -74,6 +74,11 @@ class SucursalForm(BaseForm):
             'hora_inicio': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control col-6'}),
             'hora_cierre': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control col-6'}),
         }
+
+class InventarioSucursalForm(BaseForm):
+    class Meta:
+        model = InventarioSucursal
+        fields = ['sucursal', 'variante', 'stock']
 
 class EmpleadoForm(BaseForm):
     class Meta:

@@ -99,7 +99,7 @@ class ProductoVariante(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, db_column='producto_id', related_name='variantes')
     tamaño = models.CharField(max_length=100) 
     precio = models.DecimalField(max_digits=10, decimal_places=2)
-    stock = models.PositiveIntegerField(default=0)  
+    # El stock ahora se maneja por sucursal en la tabla InventarioSucursal
 
     class Meta:
         db_table = 'productos_variante'
@@ -122,6 +122,19 @@ class Sucursal(models.Model):
     
     class Meta:
         db_table = 'sucursales'
+
+class InventarioSucursal(models.Model):
+    id_inventario = models.AutoField(primary_key=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE, db_column='sucursal_id', related_name='inventarios')
+    variante = models.ForeignKey(ProductoVariante, on_delete=models.CASCADE, db_column='variante_id', related_name='stocks_sucursal')
+    stock = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'inventarios_sucursal'
+        unique_together = (('sucursal', 'variante'),)
+
+    def __str__(self):
+        return f"{self.sucursal.direccion} - {self.variante.producto.nombre} ({self.variante.tamaño}): {self.stock}"
 
 class Empleado(models.Model):
     CARGO_CHOICES = [
@@ -188,12 +201,16 @@ class Promocion(models.Model):
 class PromocionDetalle(models.Model):
     id_detalle = models.AutoField(primary_key=True)
     promocion = models.ForeignKey(Promocion, on_delete=models.PROTECT, db_column='promocion_id', related_name='detalles')
-    variante = models.ForeignKey(ProductoVariante, on_delete=models.PROTECT, db_column='variante_id')
+    
+    # Variante para ítem fijo, o categoria para ítems elegibles
+    variante = models.ForeignKey(ProductoVariante, on_delete=models.PROTECT, db_column='variante_id', null=True, blank=True)
+    categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, db_column='categoria_id', null=True, blank=True)
+    tamaño = models.CharField(max_length=100, null=True, blank=True) 
+    
     cantidad = models.PositiveIntegerField()
 
     class Meta:
         db_table = 'promociones_detalle'
-        unique_together = (('promocion', 'variante'),)
 
     def __str__(self):
         return f"Detalle Promo {self.id_detalle}"
@@ -235,6 +252,18 @@ class CarritoItem(models.Model):
         if self.variante:
             return f"Item {self.id_item} - {self.variante} x{self.cantidad}"
         return f"Item {self.id_item} - {self.promocion.titulo} x{self.cantidad}"
+
+class CarritoItemOpcion(models.Model):
+    id_opcion = models.AutoField(primary_key=True)
+    carrito_item = models.ForeignKey(CarritoItem, on_delete=models.CASCADE, related_name='opciones_promocion')
+    variante = models.ForeignKey(ProductoVariante, on_delete=models.PROTECT)
+    cantidad = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        db_table = 'carritos_item_opcion'
+
+    def __str__(self):
+        return f"Opción {self.id_opcion} - {self.variante} x{self.cantidad}"
 
 # ==================== PEDIDOS ====================
 
@@ -284,10 +313,64 @@ class PedidoItem(models.Model):
             )
         ]
 
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        if is_new:
+            sucursal = self.pedido.sucursal
+            if self.variante:
+                inv, created = InventarioSucursal.objects.get_or_create(
+                    sucursal=sucursal, 
+                    variante=self.variante,
+                    defaults={'stock': 0}
+                )
+                inv.stock = max(0, inv.stock - self.cantidad)
+                inv.save()
+            
+            if self.promocion:
+                detalles = self.promocion.detalles.filter(variante__isnull=False)
+                for det in detalles:
+                    inv, created = InventarioSucursal.objects.get_or_create(
+                        sucursal=sucursal,
+                        variante=det.variante,
+                        defaults={'stock': 0}
+                    )
+                    inv.stock = max(0, inv.stock - (det.cantidad * self.cantidad))
+                    inv.save()
+
     def __str__(self):
         if self.variante:
             return f"Item {self.id_item} - {self.variante} x{self.cantidad}"
         return f"Item {self.id_item} - {self.promocion.titulo} x{self.cantidad}"
+
+class PedidoItemOpcion(models.Model):
+    id_opcion = models.AutoField(primary_key=True)
+    pedido_item = models.ForeignKey(PedidoItem, on_delete=models.CASCADE, related_name='opciones_promocion')
+    variante = models.ForeignKey(ProductoVariante, on_delete=models.PROTECT)
+    cantidad = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        db_table = 'pedidos_item_opcion'
+
+    def __str__(self):
+        return f"Opción {self.id_opcion} - {self.variante} x{self.cantidad}"
+    
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        if is_new:
+            # Descontar stock de la opción elegida en la promoción
+            sucursal = self.pedido_item.pedido.sucursal
+            inv, created = InventarioSucursal.objects.get_or_create(
+                sucursal=sucursal,
+                variante=self.variante,
+                defaults={'stock': 0}
+            )
+            cantidad_total = self.cantidad * self.pedido_item.cantidad
+            inv.stock = max(0, inv.stock - cantidad_total)
+            inv.save()
 
 # ==================== PAGOS ====================
 

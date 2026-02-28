@@ -25,6 +25,7 @@ urlpatterns = [
     
     # NEGOCIO - SUCURSALES Y EMPLEADOS
     path('sucursales_lista/', SucursalListView.as_view(), name='sucursales_lista'),
+    path('inventariossucursal_lista/', InventarioSucursalListView.as_view(), name='inventariossucursal_lista'),
     path('empleados_lista/', EmpleadoListView.as_view(), name='empleados_lista'),
     path('historial_lista/', HistorialListView.as_view(), name='historial_lista'),
     

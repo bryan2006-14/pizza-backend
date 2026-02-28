@@ -21,6 +21,7 @@ urlpatterns = [
     path('sucursales/', SucursalListCreate.as_view(), name='sucursales'),
     path('empleados/', EmpleadoListCreate.as_view(), name='empleados'),
     path('historiales/', HistorialListCreate.as_view(), name='historiales'),
+    path('inventarios-sucursal/', InventarioSucursalListCreate.as_view(), name='inventarios-sucursal'),
     
     # PROMOCIONES
     path('promociones/', PromocionListCreate.as_view(), name='promociones'),
@@ -61,6 +62,7 @@ urlpatterns = [
     path('sucursales/<str:columna>/<str:valor_a_buscar>/', SucursalSearchView.as_view(), name='search-sucursal'),
     path('empleados/<str:columna>/<str:valor_a_buscar>/', EmpleadoSearchView.as_view(), name='search-empleado'),
     path('historiales/<str:columna>/<str:valor_a_buscar>/', HistorialSearchView.as_view(), name='search-historial'),
+    path('inventarios-sucursal/<str:columna>/<str:valor_a_buscar>/', InventarioSucursalSearchView.as_view(), name='search-inventario-sucursal'),
     
     # PROMOCIONES
     path('promociones/<str:columna>/<str:valor_a_buscar>/', PromocionSearchView.as_view(), name='search-promocion'),

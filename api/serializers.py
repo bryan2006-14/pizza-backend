@@ -54,6 +54,15 @@ class SucursalSerializer(serializers.ModelSerializer):
         model = Sucursal
         fields = '__all__'
 
+class InventarioSucursalSerializer(serializers.ModelSerializer):
+    sucursal_direccion = serializers.CharField(source='sucursal.direccion', read_only=True)
+    producto_nombre = serializers.CharField(source='variante.producto.nombre', read_only=True)
+    variante_tamano = serializers.CharField(source='variante.tamaño', read_only=True)
+
+    class Meta:
+        model = InventarioSucursal
+        fields = '__all__'
+
 class EmpleadoSerializer(serializers.ModelSerializer):
     sucursal_direccion = serializers.CharField(source='sucursal.direccion', read_only=True)
     
@@ -76,6 +85,7 @@ class HistorialSerializer(serializers.ModelSerializer):
 
 class PromocionDetalleSerializer(serializers.ModelSerializer):
     variante_info = ProductoVarianteSerializer(source='variante', read_only=True)
+    categoria_info = CategoriaSerializer(source='categoria', read_only=True)
     
     class Meta:
         model = PromocionDetalle
@@ -90,9 +100,18 @@ class PromocionSerializer(serializers.ModelSerializer):
 
 # ==================== CARRITO ====================
 
+class CarritoItemOpcionSerializer(serializers.ModelSerializer):
+    variante_info = ProductoVarianteSerializer(source='variante', read_only=True)
+    
+    class Meta:
+        model = CarritoItemOpcion
+        fields = '__all__'
+        read_only_fields = ['carrito_item']
+
 class CarritoItemSerializer(serializers.ModelSerializer):
     variante_info = ProductoVarianteSerializer(source='variante', read_only=True)
     promocion_info = PromocionSerializer(source='promocion', read_only=True)
+    opciones_promocion = CarritoItemOpcionSerializer(many=True, required=False)
     subtotal = serializers.SerializerMethodField()
     
     class Meta:
@@ -114,6 +133,13 @@ class CarritoItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Debes especificar una variante o una promoción")
         return data
 
+    def create(self, validated_data):
+        opciones_data = validated_data.pop('opciones_promocion', [])
+        carrito_item = super().create(validated_data)
+        for opcion in opciones_data:
+            CarritoItemOpcion.objects.create(carrito_item=carrito_item, **opcion)
+        return carrito_item
+
 class CarritoSerializer(serializers.ModelSerializer):
     items = CarritoItemSerializer(many=True, read_only=True)
     cliente_nombre = serializers.CharField(source='cliente.usuario', read_only=True)
@@ -134,9 +160,17 @@ class CarritoSerializer(serializers.ModelSerializer):
 
 # ==================== PEDIDOS ====================
 
+class PedidoItemOpcionSerializer(serializers.ModelSerializer):
+    variante_info = ProductoVarianteSerializer(source='variante', read_only=True)
+    
+    class Meta:
+        model = PedidoItemOpcion
+        fields = '__all__'
+
 class PedidoItemSerializer(serializers.ModelSerializer):
     variante_info = ProductoVarianteSerializer(source='variante', read_only=True)
     promocion_info = PromocionSerializer(source='promocion', read_only=True)
+    opciones_promocion = PedidoItemOpcionSerializer(many=True, read_only=True)
     subtotal = serializers.SerializerMethodField()
     
     class Meta:
