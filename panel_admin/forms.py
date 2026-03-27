@@ -5,8 +5,12 @@ from django.contrib.auth.hashers import make_password
 class BaseForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs['class'] = 'form-control col-md-6'
+        for field_name, field in self.fields.items():
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs['class'] = 'form-check-input'
+                field.widget.attrs['style'] = 'cursor: pointer; width: 1.5em; height: 1.5em; margin-top: 0;'
+            else:
+                field.widget.attrs['class'] = 'form-control col-md-6'
 
 # ==================== USUARIOS ====================
 
@@ -69,7 +73,7 @@ class ProductoVarianteForm(BaseForm):
 class SucursalForm(BaseForm):
     class Meta:
         model = Sucursal
-        fields = ['telefono', 'direccion', 'hora_inicio', 'hora_cierre']
+        fields = ['nombre', 'telefono', 'direccion', 'hora_inicio', 'hora_cierre', 'ofrece_delivery', 'ofrece_recojo']
         widgets = {
             'hora_inicio': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control col-6'}),
             'hora_cierre': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control col-6'}),
@@ -128,7 +132,7 @@ class CarritoItemForm(BaseForm):
 class PedidoForm(BaseForm):
     class Meta:
         model = Pedido
-        fields = ['cliente', 'sucursal', 'fecha_entrega', 'estado', 'codigo', 'direccion']
+        fields = ['cliente', 'sucursal', 'fecha_entrega', 'estado', 'codigo', 'direccion', 'tipo_entrega', 'costo_delivery']
         widgets = {
             'fecha_entrega': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',

@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 
 from .models import *
 from .serializers import *
+from django.db import transaction
 
 
 # ====================================================
@@ -158,8 +159,13 @@ class CarritoItemListCreate(generics.ListCreateAPIView):
             return Response({"error": "No se proporcionó un id_item."}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
-        # Stock check no longer valid globally, handled during Pedido creation per branch
         serializer.save()
+
+class CarritoItemDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = CarritoItem.objects.all()
+    serializer_class = CarritoItemSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id_item'
 
 
 # === PEDIDOS ===
@@ -189,44 +195,46 @@ class PedidoListCreate(generics.ListCreateAPIView):
             
             # Verificación de stock por sucursal
             for item in items:
+                # 1. Verificar el item principal (si es variante simple)
                 if item.variante:
                     inv = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=item.variante).first()
-                    stock_actual = inv.stock if inv else 0
-                    if stock_actual < item.cantidad:
-                        raise ValidationError({'error': f'Stock insuficiente en esta sucursal para {item.variante.producto.nombre}'})
+                    if not inv or inv.stock < item.cantidad:
+                        raise ValidationError({'error': f'Stock insuficiente para {item.variante.producto.nombre}'})
                 
+                # 2. Verificar la promoción (detalles fijos)
                 elif item.promocion:
-                    # Verificar stock de items fijos de la promo en esta sucursal
                     detalles_fijos = PromocionDetalle.objects.filter(promocion=item.promocion, variante__isnull=False)
                     for detalle in detalles_fijos:
                         inv = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=detalle.variante).first()
-                        stock_actual = inv.stock if inv else 0
-                        if stock_actual < (detalle.cantidad * item.cantidad):
-                            raise ValidationError({'error': f'Stock insuficiente en esta sucursal para item de promo: {detalle.variante.producto.nombre}'})
-            
+                        if not inv or inv.stock < (detalle.cantidad * item.cantidad):
+                            raise ValidationError({'error': f'Stock insuficiente para item de promo: {detalle.variante.producto.nombre}'})
+                
+                # 3. Verificar las opciones elegidas (esto vale para ambos: extras, salsas, pizzas elegidas en promo)
+                for opcion in item.opciones_promocion.all():
+                    inv_opc = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=opcion.variante).first()
+                    if not inv_opc or inv_opc.stock < (opcion.cantidad * item.cantidad):
+                        raise ValidationError({'error': f'Stock insuficiente para extra/opción: {opcion.variante.producto.nombre}'})
+
             # Crear PedidoItems (esto ejecutará PedidoItem.save() que descuenta el stock)
             for item in items:
-                if item.variante:
-                    PedidoItem.objects.create(
-                        pedido=pedido,
-                        variante=item.variante,
-                        cantidad=item.cantidad,
-                        precio=item.variante.precio
+                # Determinar precio base
+                precio_base = item.variante.precio if item.variante else item.promocion.precio
+                
+                pedido_item = PedidoItem.objects.create(
+                    pedido=pedido,
+                    variante=item.variante,
+                    promocion=item.promocion,
+                    cantidad=item.cantidad,
+                    precio=precio_base
+                )
+                
+                # Copiar opciones del carrito al pedido (para que el historial sea fiel y el precio suba)
+                for opcion in item.opciones_promocion.all():
+                    PedidoItemOpcion.objects.create(
+                        pedido_item=pedido_item,
+                        variante=opcion.variante,
+                        cantidad=opcion.cantidad
                     )
-                elif item.promocion:
-                    pedido_item = PedidoItem.objects.create(
-                        pedido=pedido,
-                        promocion=item.promocion,
-                        cantidad=item.cantidad,
-                        precio=item.promocion.precio
-                    )
-                    # Copiar opciones del carrito al pedido
-                    for opcion in item.opciones_promocion.all():
-                        PedidoItemOpcion.objects.create(
-                            pedido_item=pedido_item,
-                            variante=opcion.variante,
-                            cantidad=opcion.cantidad
-                        )
         
             # Limpiar carrito
             items.delete()
@@ -263,9 +271,25 @@ class PagoListCreate(ListCreateView):
 # ====================================================
 
 class Status(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     def get(self, request):
-        return Response({"detail": "success"}, status=status.HTTP_200_OK)
+        user = request.user
+        # Detectar si es un UsuarioAdmin o si es un Cliente
+        # Dependiendo de cómo esté configurado SimpleJWT, request.user puede ser un UsuarioAdmin 
+        # con el ID del cliente, o el cliente mismo si se configuró así.
+        
+        # Por ahora, devolvemos la info básica que tenemos
+        # Si es un objeto Cliente (o se comporta como tal)
+        if hasattr(user, 'usuario') and hasattr(user, 'correo'):
+            return Response({
+                "usuario": user.usuario,
+                "correo": getattr(user, 'correo', ''),
+                "telefono": getattr(user, 'telefono', ''),
+                "id_cliente": getattr(user, 'id_cliente', None),
+                "is_authenticated": True,
+            }, status=status.HTTP_200_OK)
+        
+        return Response({"detail": "Authenticated"}, status=status.HTTP_200_OK)
 
 
 class RegistroView(APIView):
@@ -283,16 +307,18 @@ class RegistroView(APIView):
                 value=tokens['access'],
                 httponly=True,
                 secure=False,
-                max_age=60 * 5,
-                samesite='Lax'
+                max_age=60 * 60 * 24, # 1 día
+                samesite='Lax',
+                path='/'
             )
             response.set_cookie(
                 key='refresh_token',
                 value=tokens['refresh'],
                 httponly=True,
                 secure=False,
-                max_age=60 * 60 * 24 * 7,
-                samesite='Lax'
+                max_age=60 * 60 * 24 * 7, # 7 días
+                samesite='Lax',
+                path='/'
             )
             return response
 
@@ -317,22 +343,35 @@ class LoginView(APIView):
             refresh = RefreshToken.for_user(cliente)
             access = refresh.access_token
 
-            response = Response({'detail': 'Inicio de sesión exitoso'}, status=status.HTTP_200_OK)
+            # Preparamos los datos del cliente para enviarlos
+            cliente_data = {
+                'id_cliente': cliente.id_cliente,
+                'usuario': cliente.usuario,
+                'correo': cliente.correo,
+                'telefono': cliente.telefono,
+            }
+
+            response = Response({
+                'detail': 'Inicio de sesión exitoso',
+                'user': cliente_data
+            }, status=status.HTTP_200_OK)
             response.set_cookie(
                 key='access_token',
                 value=str(access),
                 httponly=True,
                 secure=False,
-                max_age=60 * 4,
+                max_age=60 * 60 * 24, # 1 día
                 samesite='Lax',
+                path='/', # Crucial para que el resto de la API lo vea
             )
             response.set_cookie(
                 key='refresh_token',
                 value=str(refresh),
                 httponly=True,
                 secure=False,
-                max_age=60 * 60 * 24 * 7,
+                max_age=60 * 60 * 24 * 7, # 7 días
                 samesite='Lax',
+                path='/', # Crucial
             )
             return response
         else:
@@ -350,14 +389,15 @@ class RefreshTokenView(TokenRefreshView):
             if response.status_code == 200:
                 new_access_token = response.data.get('access', None)
                 if new_access_token:
-                    response.delete_cookie('access_token')
+                    response.delete_cookie('access_token', path='/')
                     response.set_cookie(
                         key='access_token',
                         value=new_access_token,
                         httponly=True,
                         secure=False,
-                        max_age=60 * 4,
-                        samesite='Lax'
+                        max_age=60 * 60 * 24, # 1 día
+                        samesite='Lax',
+                        path='/'
                     )
                     response.data = {'message': 'Access Token refreshed successfully'}
                 else:
@@ -366,6 +406,18 @@ class RefreshTokenView(TokenRefreshView):
             return response
         else:
             return Response({"detail": "Refresh token not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LogoutView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        response = Response({"detail": "Sesión cerrada"}, status=status.HTTP_200_OK)
+        # Limpiar cookies en el path raíz
+        response.delete_cookie('access_token', path='/')
+        response.delete_cookie('refresh_token', path='/')
+        return response
+    def post(self, request):
+        return self.get(request)
 
 
 # ====================================================

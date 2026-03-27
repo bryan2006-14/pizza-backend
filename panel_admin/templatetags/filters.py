@@ -13,3 +13,6 @@ def stock_en_sucursal(variante, sucursal_id):
         return 0
     inv = InventarioSucursal.objects.filter(sucursal_id=sucursal_id, variante=variante).first()
     return inv.stock if inv else 0
+@register.filter
+def is_boolean(value):
+    return isinstance(value, bool)

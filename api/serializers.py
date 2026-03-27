@@ -35,6 +35,10 @@ class CategoriaSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProductoVarianteSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+    producto_imagen = serializers.CharField(source='producto.imagen', read_only=True)
+    producto_descripcion = serializers.CharField(source='producto.descripcion', read_only=True)
+    
     class Meta:
         model = ProductoVariante
         fields = '__all__'
@@ -119,17 +123,37 @@ class CarritoItemSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_subtotal(self, obj):
+        price = 0
         if obj.variante:
-            return float(obj.variante.precio) * obj.cantidad
+            price = float(obj.variante.precio)
         elif obj.promocion:
-            return float(obj.promocion.precio) * obj.cantidad
-        return 0
+            price = float(obj.promocion.precio)
+        
+        # Sumar el precio de las opciones (extras, salsas, etc.)
+        for opcion in obj.opciones_promocion.all():
+            # Si el item principal es un producto simple, cualquier opción es un extra de pago
+            if obj.variante:
+                price += float(opcion.variante.precio) * opcion.cantidad
+            else:
+                # Si es una promoción, solo sumamos el precio si NO es una pizza o bebida 
+                # (suponiendo que las pizzas/bebidas ya están incluidas en el precio del combo)
+                cat = (opcion.variante.producto.categoria.nombre if opcion.variante.producto.categoria else "").lower()
+                if 'pizza' not in cat and 'bebida' not in cat and 'gaseosa' not in cat:
+                    price += float(opcion.variante.precio) * opcion.cantidad
+            
+        return price * obj.cantidad
     
     def validate(self, data):
-        # Validar que solo uno de los dos (variante o promocion) esté presente
-        if data.get('variante') and data.get('promocion'):
+        # Para validación, necesitamos saber qué hay ya en el objeto si es una actualización
+        instance = getattr(self, 'instance', None)
+        
+        # Obtenemos los valores actuales (del request o de la instancia)
+        variante = data.get('variante') if 'variante' in data else (instance.variante if instance else None)
+        promocion = data.get('promocion') if 'promocion' in data else (instance.promocion if instance else None)
+
+        if variante and promocion:
             raise serializers.ValidationError("No puedes tener variante y promoción en el mismo item")
-        if not data.get('variante') and not data.get('promocion'):
+        if not variante and not promocion:
             raise serializers.ValidationError("Debes especificar una variante o una promoción")
         return data
 
@@ -152,10 +176,8 @@ class CarritoSerializer(serializers.ModelSerializer):
     def get_total(self, obj):
         total = 0
         for item in obj.items.all():
-            if item.variante:
-                total += float(item.variante.precio) * item.cantidad
-            elif item.promocion:
-                total += float(item.promocion.precio) * item.cantidad
+            # Usar el método get_subtotal que ya definimos arriba
+            total += CarritoItemSerializer().get_subtotal(item)
         return total
 
 # ==================== PEDIDOS ====================
@@ -178,7 +200,21 @@ class PedidoItemSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_subtotal(self, obj):
-        return float(obj.precio) * obj.cantidad
+        price = float(obj.precio) # Este es el precio base guardado en el pedido
+        
+        # Sumar el precio de las opciones (extras, salsas, etc.) guardadas en este item
+        for opcion in obj.opciones_promocion.all():
+            # Si el item principal es un producto simple, cualquier opción es un extra de pago
+            if obj.variante:
+                price += float(opcion.variante.precio) * opcion.cantidad
+            else:
+                # Si es una promoción, solo sumamos el precio si NO es una pizza o bebida 
+                # (suponiendo que las pizzas/bebidas ya están incluidas en el precio del combo)
+                cat = (opcion.variante.producto.categoria.nombre if opcion.variante.producto.categoria else "").lower()
+                if 'pizza' not in cat and 'bebida' not in cat and 'gaseosa' not in cat:
+                    price += float(opcion.variante.precio) * opcion.cantidad
+            
+        return price * obj.cantidad
     
     def validate(self, data):
         # Validar que solo uno de los dos (variante o promocion) esté presente
@@ -200,7 +236,20 @@ class PedidoSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_total(self, obj):
-        total = sum(float(item.precio) * item.cantidad for item in obj.items.all())
+        total = 0
+        for item in obj.items.all():
+            item_price = float(item.precio)
+            # Sumar extras/opciones igual que PedidoItemSerializer.get_subtotal
+            for opcion in item.opciones_promocion.all():
+                if item.variante:
+                    item_price += float(opcion.variante.precio) * opcion.cantidad
+                else:
+                    cat = (opcion.variante.producto.categoria.nombre if opcion.variante.producto.categoria else "").lower()
+                    if 'pizza' not in cat and 'bebida' not in cat and 'gaseosa' not in cat:
+                        item_price += float(opcion.variante.precio) * opcion.cantidad
+            total += item_price * item.cantidad
+        # Sumar el costo de delivery si aplica
+        total += float(obj.costo_delivery)
         return total
     
     def get_pago_info(self, obj):

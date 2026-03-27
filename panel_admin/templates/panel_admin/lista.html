@@ -66,6 +66,10 @@
                     <td>
                         {% if campo == 'imagen' and objeto.imagen %}
                         <img src="{{ objeto.imagen.url }}" alt="{{ objeto.nombre }}" style="height: 35px;">
+                        {% elif objeto|getattribute:campo == True and objeto|getattribute:campo|is_boolean %}
+                        <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
+                        {% elif objeto|getattribute:campo == False and objeto|getattribute:campo|is_boolean %}
+                        <span class="text-danger"><i class="bi bi-x-circle-fill"></i></span>
                         {% else %}
                         {{ objeto|getattribute:campo }}
                         {% endif %}

@@ -49,7 +49,12 @@ class ProductoVarianteAdmin(admin.ModelAdmin):
 
 # ==================== NEGOCIO - SUCURSALES Y EMPLEADOS ====================
 
-    search_fields = ('direccion',)
+@admin.register(Sucursal)
+class SucursalAdmin(admin.ModelAdmin):
+    list_display = ('id_sucursal', 'nombre', 'direccion', 'telefono', 'ofrece_delivery', 'ofrece_recojo', 'hora_inicio', 'hora_cierre')
+    list_editable = ('ofrece_delivery', 'ofrece_recojo')
+    list_filter = ('ofrece_delivery', 'ofrece_recojo')
+    search_fields = ('nombre', 'direccion')
 
 @admin.register(InventarioSucursal)
 class InventarioSucursalAdmin(admin.ModelAdmin):

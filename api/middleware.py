@@ -25,15 +25,38 @@ class AppendSlashMiddleware(MiddlewareMixin):
 
 class CookieJWTAuthentication(BaseAuthentication):
     def authenticate(self, request):
-        # Extraer token de la cookie
+        # DEBUG: Ver cookies que llegan
         access_token = request.COOKIES.get('access_token')
+        print(f"--- AUTH DEBUG: access_token cookie: {access_token[:20] if access_token else 'MISSING'} ---")
         
         if access_token:
             try:
                 # Pasar el token al autenticador JWT de Simple JWT
-                validated_token = JWTAuthentication().get_validated_token(access_token)
-                user = JWTAuthentication().get_user(validated_token)
-                return (user, validated_token)
+                jwt_auth = JWTAuthentication()
+                validated_token = jwt_auth.get_validated_token(access_token)
+                print(f"--- AUTH DEBUG: Token validado. Claims: {validated_token} ---")
+                
+                # Intentar obtener el usuario del token (buscando en UsuarioAdmin)
+                try:
+                    user = jwt_auth.get_user(validated_token)
+                    if user:
+                        return (user, validated_token)
+                except:
+                    pass
+
+                # Si no es un UsuarioAdmin, buscamos en la tabla Cliente
+                from .models import Cliente
+                user_id = validated_token.get('user_id')
+                if user_id:
+                    try:
+                        cliente = Cliente.objects.get(id_cliente=user_id)
+                        # Agregamos atributos que DRF espera
+                        cliente.is_authenticated = True
+                        return (cliente, validated_token)
+                    except Cliente.DoesNotExist:
+                        pass
+                
+                return None
             except Exception:
                 return None
         return None

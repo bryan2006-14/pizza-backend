@@ -1,6 +1,5 @@
 from django.urls import path
 from .views import *
-from django.contrib.auth.views import LogoutView
 from rest_framework.authtoken import views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -30,6 +29,7 @@ urlpatterns = [
     # CARRITO
     path('carritos/', CarritoListCreate.as_view(), name='carritos'),
     path('carritos-items/', CarritoItemListCreate.as_view(), name='carritos-items'),
+    path('carritos-items/<int:id_item>/', CarritoItemDetail.as_view(), name='carrito-item-detail'),
     
     # PEDIDOS
     path('pedidos/', PedidoListCreate.as_view(), name='pedidos'),

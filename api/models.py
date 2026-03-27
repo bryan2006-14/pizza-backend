@@ -112,13 +112,16 @@ class ProductoVariante(models.Model):
 
 class Sucursal(models.Model):
     id_sucursal = models.AutoField(primary_key=True)
-    telefono = models.IntegerField()  # En la imagen es string, podrías cambiarlo
-    direccion = models.CharField(max_length=45)
+    nombre = models.CharField(max_length=100, default='Sucursal Happy Pizza')
+    telefono = models.CharField(max_length=20)
+    direccion = models.CharField(max_length=200)
     hora_inicio = models.TimeField()
     hora_cierre = models.TimeField()
+    ofrece_delivery = models.BooleanField(default=True)
+    ofrece_recojo = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.id_sucursal} - {self.direccion}"
+        return f"{self.nombre} - {self.direccion}"
     
     class Meta:
         db_table = 'sucursales'
@@ -285,6 +288,8 @@ class Pedido(models.Model):
     estado = models.CharField(max_length=45, choices=ESTADO_CHOICES, default='pendiente')
     direccion = models.CharField(max_length=85)
     codigo = models.CharField(max_length=45, unique=True)
+    tipo_entrega = models.CharField(max_length=20, choices=[('delivery', 'Delivery'), ('recojo', 'Recojo en tienda')], default='delivery')
+    costo_delivery = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 
     class Meta:
         db_table = 'pedidos'
