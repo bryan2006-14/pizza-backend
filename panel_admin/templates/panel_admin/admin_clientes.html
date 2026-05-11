@@ -3,7 +3,9 @@
 {% block titulo %}Admin - Clientes{% endblock %}
 
 {% block contenido %}
-<div class="row custom-height mx-0 py-2">
+
+<div class="row mx-0 py-2">
+    {# ── Gráfico lineal clientes ── #}
     <div class="col-lg-9 col-12 pt-3">
         <div class="contenedor-grafico grafico-xl chart-entrance">
             <div class="grafico-header">
@@ -13,74 +15,69 @@
                 </h3>
                 <div class="grafico-controls">
                     <div class="selector-tiempo">
-                        <button class="btn-tiempo active">1A</button>
-                        <button class="btn-tiempo">6M</button>
-                        <button class="btn-tiempo">3M</button>
+                        <button class="btn-tiempo active" data-meses="12">1A</button>
+                        <button class="btn-tiempo" data-meses="6">6M</button>
+                        <button class="btn-tiempo" data-meses="3">3M</button>
                     </div>
                 </div>
             </div>
-            <div id="graficoLinealLCientesAnio" class="chart-container"></div>
+            {# altura fija en px — ECharts la necesita al init #}
+            <div id="graficoLinealClientesAnio" style="width:100%; height:380px;"></div>
             <div class="grafico-stats">
                 <div class="stat-item">
                     <div class="stat-valor">{{ clientes_nuevos_mes|default:"0" }}</div>
                     <div class="stat-label">Nuevos Este Mes</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-valor">{{ crecimiento_clientes|default:"0%" }}</div>
-                    <div class="stat-label">Crecimiento</div>
+                    <div class="stat-valor">{{ total_clientes|default:"0" }}</div>
+                    <div class="stat-label">Total Clientes</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-valor">{{ mes_maximo|default:"-" }}</div>
-                    <div class="stat-label">Mes Pico</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-valor">{{ promedio_mensual|default:"0" }}</div>
-                    <div class="stat-label">Promedio Mensual</div>
+                    <div class="stat-valor">{{ porcentaje_retencion|default:"0" }}%</div>
+                    <div class="stat-label">Retención</div>
                 </div>
             </div>
         </div>
     </div>
 
+    {# ── Clientes más frecuentes ── #}
     <div class="col-lg-3 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
                 <h3 class="grafico-titulo">
                     <i class="fas fa-crown"></i>
-                    Clientes Más Frecuentes
+                    Más Frecuentes
                 </h3>
             </div>
-            <div class="chart-container d-flex flex-column justify-content-center">
+            <div class="d-flex flex-column justify-content-center h-100 pb-3">
                 {% if clientes_mas_frecuentes %}
-                    <div class="chart-legend">
-                        {% for cliente in clientes_mas_frecuentes %}
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: var(--pizza-orange);"></div>
-                            <span>{{ cliente.0 }}</span>
-                            <strong>{{ cliente.1 }}</strong>
-                        </div>
-                        {% endfor %}
+                <div class="chart-legend">
+                    {% for cliente in clientes_mas_frecuentes %}
+                    <div class="legend-item">
+                        <div class="legend-color" style="background:#FF6B35;"></div>
+                        <span>{{ cliente.0 }}</span>
+                        <strong>{{ cliente.1 }} pedidos</strong>
                     </div>
+                    {% endfor %}
+                </div>
                 {% else %}
-                    <div class="grafico-loading">
-                        <div class="loading-spinner"></div>
-                        <div class="loading-text">Sin datos disponibles</div>
-                    </div>
+                <div class="grafico-loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Sin datos</div>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="row custom-height mx-0 py-2">
+<div class="row mx-0 py-2">
     <div class="col-lg-4 col-md-6 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
-                <h3 class="grafico-titulo">
-                    <i class="fas fa-chart-pie"></i>
-                    Retención de Clientes
-                </h3>
+                <h3 class="grafico-titulo"><i class="fas fa-chart-pie"></i> Retención</h3>
             </div>
-            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+            <div class="d-flex flex-column justify-content-center align-items-center" style="min-height:200px;">
                 <div class="contenedor-texto text-center">
                     <p class="color-numero mb-2">{{ porcentaje_retencion|default:"0" }}%</p>
                     <div class="stat-label">Tasa de Retención</div>
@@ -96,18 +93,12 @@
     <div class="col-lg-4 col-md-6 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
-                <h3 class="grafico-titulo">
-                    <i class="fas fa-users"></i>
-                    Total de Clientes
-                </h3>
+                <h3 class="grafico-titulo"><i class="fas fa-users"></i> Total Clientes</h3>
             </div>
-            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+            <div class="d-flex flex-column justify-content-center align-items-center" style="min-height:200px;">
                 <div class="contenedor-texto text-center">
                     <p class="color-numero mb-2">{{ total_clientes|default:"0" }}</p>
                     <div class="stat-label">Clientes Registrados</div>
-                </div>
-                <div class="performance-indicator performance-positive mt-3">
-                    <i class="fas fa-arrow-up"></i>+{{ crecimiento_total|default:"0" }}%
                 </div>
             </div>
         </div>
@@ -116,18 +107,12 @@
     <div class="col-lg-4 col-md-6 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
-                <h3 class="grafico-titulo">
-                    <i class="fas fa-user-plus"></i>
-                    Nuevos Este Mes
-                </h3>
+                <h3 class="grafico-titulo"><i class="fas fa-user-plus"></i> Nuevos Este Mes</h3>
             </div>
-            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+            <div class="d-flex flex-column justify-content-center align-items-center" style="min-height:200px;">
                 <div class="contenedor-texto text-center">
                     <p class="color-numero mb-2">{{ clientes_nuevos_mes|default:"0" }}</p>
                     <div class="stat-label">Nuevos Registros</div>
-                </div>
-                <div class="performance-indicator performance-positive mt-3">
-                    <i class="fas fa-arrow-up"></i>+{{ crecimiento_mensual|default:"0" }}%
                 </div>
             </div>
         </div>
@@ -135,170 +120,92 @@
 </div>
 
 <script>
-    const chartDataClientes = {{ clientes_por_cada_mes_ultimo_anio|safe }};
-    const arregloMeses = {{ meses|safe }};
-    const graficoLineal = echarts.init(document.getElementById('graficoLinealLCientesAnio'));
-    
-    const option = {
-        title: {
-            text: 'Evolución de Clientes - Último Año',
-            subtext: 'Tendencia mensual de registro de clientes',
-            left: 'center',
-            textStyle: {
-                color: 'var(--pizza-red)',
-                fontSize: 18,
-                fontWeight: 'bold'
-            },
-            subtextStyle: {
-                color: 'var(--text-secondary)',
-                fontSize: 14
-            }
-        },
-        tooltip: {
-            trigger: 'axis',
-            backgroundColor: 'var(--pizza-red)',
-            borderColor: 'var(--pizza-yellow)',
-            textStyle: {
-                color: 'white',
-                fontSize: 14
-            },
-            formatter: function(params) {
-                return `<strong>${params[0].name}</strong><br/>
-                       Clientes: <b>${params[0].value}</b><br/>
-                       Tendencia: <b>${params[0].value > chartDataClientes[params[0].dataIndex - 1] ? '↗️' : '↘️'}</b>`;
-            }
-        },
-        xAxis: {
-            type: 'category',
-            data: arregloMeses,
-            axisLabel: {
-                color: 'var(--text-primary)',
-                fontSize: 11,
-                fontWeight: 'bold',
-                rotate: 30
-            },
-            axisLine: {
-                lineStyle: {
-                    color: 'var(--pizza-orange)'
-                }
-            }
-        },
-        yAxis: {
-            type: 'value',
-            name: 'Número de Clientes',
-            nameTextStyle: {
-                color: 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: 'bold'
-            },
-            axisLabel: {
-                color: 'var(--text-primary)',
-                fontSize: 11
-            },
-            axisLine: {
-                lineStyle: {
-                    color: 'var(--pizza-orange)'
-                }
-            },
-            splitLine: {
-                lineStyle: {
-                    color: 'var(--border-color)',
-                    type: 'dashed'
-                }
-            }
-        },
-        series: [{
-            name: 'Clientes',
-            type: 'line',
-            data: chartDataClientes,
-            smooth: true,
-            itemStyle: {
-                color: 'var(--pizza-red)',
-                borderWidth: 2,
-                borderColor: '#fff'
-            },
-            lineStyle: {
-                width: 4,
-                color: 'var(--pizza-red)'
-            },
-            areaStyle: {
-                color: {
-                    type: 'linear',
-                    x: 0,
-                    y: 0,
-                    x2: 0,
-                    y2: 1,
-                    colorStops: [{
-                        offset: 0, 
-                        color: 'rgba(227, 30, 36, 0.3)'
-                    }, {
-                        offset: 1, 
-                        color: 'rgba(227, 30, 36, 0.05)'
-                    }]
-                }
-            },
-            symbol: 'circle',
-            symbolSize: 8,
-            emphasis: {
-                itemStyle: {
-                    shadowBlur: 15,
-                    shadowColor: 'rgba(227, 30, 36, 0.5)'
-                }
-            },
-            label: {
-                show: true,
-                position: 'top',
-                color: 'var(--text-primary)',
-                fontWeight: 'bold',
-                fontSize: 10,
-                formatter: '{c}'
-            }
-        }],
-        grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '15%',
-            top: '20%',
-            containLabel: true
-        },
-        animation: true,
-        animationDuration: 1500,
-        animationEasing: 'cubicOut'
-    };
+(function () {
+    const todosLosDatos = {{ clientes_por_cada_mes_ultimo_anio|safe }};
+    const todosMeses    = {{ meses|safe }};
 
-    graficoLineal.setOption(option);
+    // ── Init gráfico ────────────────────────────────────────────
+    const chart = echarts.init(document.getElementById('graficoLinealClientesAnio'));
 
-    // Responsive handling
-    window.addEventListener('resize', function() {
-        graficoLineal.resize();
-    });
+    function buildOption(datos, mesesLabel) {
+        return {
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: '#E31E24',
+                borderColor:     '#FDB913',
+                textStyle:       { color: '#fff', fontSize: 13 },
+                formatter: params =>
+                    `<strong>${params[0].name}</strong><br/>Clientes: <b>${params[0].value}</b>`,
+            },
+            xAxis: {
+                type: 'category',
+                data: mesesLabel,
+                axisLabel: { rotate: 30, color: '#1a1a1a', fontSize: 11, fontWeight: 'bold' },
+                axisLine:  { lineStyle: { color: '#FF6B35' } },
+            },
+            yAxis: {
+                type: 'value',
+                name: 'Clientes',
+                nameTextStyle: { color: '#666', fontSize: 12 },
+                axisLabel:    { color: '#1a1a1a' },
+                splitLine:    { lineStyle: { color: '#E5E5E5', type: 'dashed' } },
+            },
+            series: [{
+                name: 'Clientes',
+                type: 'line',
+                data: datos,
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 8,
+                itemStyle: { color: '#E31E24', borderWidth: 2, borderColor: '#fff' },
+                lineStyle:  { width: 4, color: '#E31E24' },
+                areaStyle:  {
+                    color: {
+                        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [
+                            { offset: 0, color: 'rgba(227,30,36,0.3)' },
+                            { offset: 1, color: 'rgba(227,30,36,0.03)' },
+                        ],
+                    },
+                },
+                label: { show: true, position: 'top', color: '#1a1a1a', fontWeight: 'bold', fontSize: 10 },
+            }],
+            grid: { left: '3%', right: '4%', bottom: '15%', top: '8%', containLabel: true },
+            animation: true,
+            animationDuration: 1200,
+            animationEasing: 'cubicOut',
+        };
+    }
 
-    // Time selector functionality
+    chart.setOption(buildOption(todosLosDatos, todosMeses));
+
+    // ── Selector de período ─────────────────────────────────────
     document.querySelectorAll('.btn-tiempo').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             document.querySelectorAll('.btn-tiempo').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            
-            // Aquí puedes agregar la lógica para actualizar los datos según el período seleccionado
-            console.log('Período seleccionado:', this.textContent);
+            const n = parseInt(this.dataset.meses, 10);
+            chart.setOption(buildOption(
+                todosLosDatos.slice(-n),
+                todosMeses.slice(-n)
+            ));
         });
     });
-</script>
 
-<style>
-    .custom-height {
-        min-height: calc(100vh - 100px);
-    }
-    
-    #graficoLinealLCientesAnio {
-        width: 100%;
-        height: 100%;
-        border-radius: 15px;
-    }
-    
-    .contenedor-texto .color-numero {
-        font-size: 3.5rem !important;
-    }
-</style>
+    // ── Resize limpio ───────────────────────────────────────────
+    window.__echartsInstances = window.__echartsInstances || [];
+    window.__echartsInstances.push(chart);
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            window.__echartsInstances.forEach(c => {
+                if (c && !c.isDisposed()) c.resize();
+            });
+        }, 150);
+    });
+})();
+</script>
 
 {% endblock %}

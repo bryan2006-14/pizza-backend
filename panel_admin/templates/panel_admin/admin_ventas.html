@@ -3,42 +3,70 @@
 {% block titulo %}Admin - Ventas{% endblock %}
 
 {% block contenido %}
-<div class="row custom-height mx-0 py-2">
+
+{# ── Paleta de colores para ECharts (no pueden ser CSS vars) ── #}
+<script>
+const PIZZA = {
+    red:        '#E31E24',
+    orange:     '#FF6B35',
+    yellow:     '#FDB913',
+    gold:       '#FFD700',
+    darkRed:    '#B71C1C',
+    lightRed:   'rgba(227,30,36,0.15)',
+    textPrimary:'#1a1a1a',
+    textMuted:  '#666666',
+    border:     '#E5E5E5',
+    series: ['#E31E24','#FF6B35','#FDB913','#FFD700','#FF6787','#FFB68C',
+             '#B6D3E2','#97ED97','#55CBD3','#D18BC0','#F9D877','#FE8E7B'],
+};
+
+const ECHART_TOOLTIP = {
+    backgroundColor: '#E31E24',
+    borderColor:     '#FDB913',
+    textStyle:       { color: '#fff', fontSize: 13 },
+};
+</script>
+
+<div class="row mx-0 py-2">
+    {# ── Gráfico lineal principal ── #}
     <div class="col-lg-9 col-12 pt-3">
         <div class="box d-flex flex-column h-100">
             <h3 class="text-center py-3 px-1">Ventas en el último año</h3>
-            <div id="graficoLinealVentasAnio" class="flex-grow-1 overflow-auto contenedor-grafico"></div>
+            <div id="graficoLinealVentasAnio" style="width:100%; height:420px;"></div>
         </div>
     </div>
 
+    {# ── Días con más ventas ── #}
     <div class="col-lg-3 col-12 pt-3">
         <div class="box d-flex flex-column justify-content-center h-100">
             <h3 class="text-center py-3 px-1">Días con más ventas</h3>
             <div class="flex-grow-1 px-4">
                 {% if top_dias_data %}
                     {% for dia in top_dias_data %}
-                        <div class="d-flex justify-content-between">
-                            <h4>{{ dia.dia }}</h4>
-                            <h4>{{ dia.total_ventas }}</h4>
-                        </div>
-                        <hr class="m-1">
+                    <div class="d-flex justify-content-between align-items-center py-1">
+                        <span>{{ dia.dia }}</span>
+                        <strong>{{ dia.total_ventas }}</strong>
+                    </div>
+                    <hr class="m-1">
                     {% endfor %}
                 {% else %}
-                    <h4 class="text-center">Sin datos</h4>
+                    <p class="text-center text-muted">Sin datos</p>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="row custom-height mx-0 py-2">
+<div class="row mx-0 py-2">
+    {# ── Métodos de pago ── #}
     <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
         <div class="box d-flex flex-column h-100">
             <h3 class="text-center py-3 px-1">Métodos de pago</h3>
-            <div id="graficoCircularPagos" class="flex-grow-1 contenedor-grafico"></div>
+            <div id="graficoCircularPagos" style="width:100%; height:280px;"></div>
         </div>
     </div>
 
+    {# ── Ingresos del mes ── #}
     <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
         <div class="box d-flex flex-column h-100">
             <h3 class="text-center py-3 px-1">Ingresos del mes</h3>
@@ -48,27 +76,27 @@
         </div>
     </div>
 
+    {# ── Horas con más ventas ── #}
     <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
         <div class="box d-flex flex-column h-100">
             <h3 class="text-center py-3 px-1">Horas con más ventas</h3>
             <div class="flex-grow-1 px-4">
                 {% if top_horas_data %}
                     {% for hora in top_horas_data %}
-                        <div class="d-flex justify-content-between">
-                            <h4>{{ hora.hora }}</h4>
-                            <h4>{{ hora.total_ventas }}</h4>
-                        </div>
-                        <hr class="m-1">
+                    <div class="d-flex justify-content-between align-items-center py-1">
+                        <span>{{ hora.hora }}</span>
+                        <strong>{{ hora.total_ventas }}</strong>
+                    </div>
+                    <hr class="m-1">
                     {% endfor %}
                 {% else %}
-                    <div class="text-center">
-                        <h4>Sin datos</h4>
-                    </div>
+                    <p class="text-center text-muted">Sin datos</p>
                 {% endif %}
             </div>
         </div>
     </div>
 
+    {# ── Costo promedio ── #}
     <div class="col-lg-3 col-md-4 col-sm-6 col-12 pt-3">
         <div class="box d-flex flex-column h-100">
             <h3 class="text-center py-3 px-1">Costo promedio de venta</h3>
@@ -80,114 +108,133 @@
 </div>
 
 <script>
-    const chartData = {{ data_ventas|safe }};
+(function () {
+    // ── Datos del servidor ──────────────────────────────────────
+    const chartData  = {{ data_ventas|safe }};
     const chartMeses = {{ meses|safe }};
-    
-    const graficoLinealVentasAnio = echarts.init(document.getElementById('graficoLinealVentasAnio'));
 
-    const ventas = chartData.map(item => {
-        const ventasString = item.split(' - ')[0];
-        return parseFloat(ventasString);
-    });
-
+    const ventas = chartData.map(item => parseFloat(item.split(' - ')[0]) || 0);
     const ganancias = chartData.map(item => {
-        const gananciasString = item.split(' - ')[1];
-        return parseFloat(gananciasString.replace('S/.', '').replace(',', '')); 
+        const part = item.split(' - ')[1] || '';
+        return parseFloat(part.replace('S/.', '').replace(',', '')) || 0;
     });
 
-    const option = {
-        title: {
-            text: null,
-        },
+    // ── Gráfico lineal ──────────────────────────────────────────
+    const elLineal = document.getElementById('graficoLinealVentasAnio');
+    const graficoLineal = echarts.init(elLineal);
+
+    graficoLineal.setOption({
         tooltip: {
             trigger: 'axis',
+            ...ECHART_TOOLTIP,
+        },
+        legend: {
+            data: ['Ventas', 'Ganancias (S/.)'],
+            bottom: 0,
+            textStyle: { color: PIZZA.textPrimary },
         },
         xAxis: {
             type: 'category',
             data: chartMeses,
-            axisLabel: {
-                rotate: 30
-            }
+            axisLabel: { rotate: 30, color: PIZZA.textPrimary, fontSize: 11 },
+            axisLine:  { lineStyle: { color: PIZZA.orange } },
         },
-        yAxis: [{
-            type: 'value',
-            name: 'Ventas',
-            axisLabel: {
-                formatter: '{value}'
-            }
-        }, {
-            type: 'value',
-            name: 'Ganancias (S/.)',
-            axisLabel: {
-                formatter: 'S/. {value}'
-            }
-        }],
-        series: [{
-            name: 'Ventas',
-            type: 'line',
-            data: ventas,
-            smooth: true,
-            itemStyle: {
-                color: '#D03139'
+        yAxis: [
+            {
+                type: 'value',
+                name: 'Ventas',
+                axisLabel: { color: PIZZA.textPrimary },
+                splitLine: { lineStyle: { color: PIZZA.border, type: 'dashed' } },
             },
-            lineStyle: {
-                width: 3
+            {
+                type: 'value',
+                name: 'Ganancias (S/.)',
+                axisLabel: { color: PIZZA.textPrimary, formatter: 'S/. {value}' },
+                splitLine: { show: false },
             },
-            symbol: 'circle',
-            symbolSize: 8,
-        }, {
-            name: 'Ganancias (S/.)',
-            type: 'line',
-            data: ganancias,
-            smooth: true,
-            itemStyle: {
-                color: '#4CAF50'
-            },
-            lineStyle: {
-                width: 3
-            },
-            symbol: 'circle',
-            symbolSize: 8,
-        }]
-    };
-    graficoLinealVentasAnio.setOption(option);
-
-    // Gráfico Circular de Métodos de Pago
-    const chartDataPagos = {{ data_pagos|safe }};
-    const graficoCircularPagos = echarts.init(document.getElementById('graficoCircularPagos'));
-
-    const optionCircular = {
-        title: {
-            left: 'center',
-            textStyle: {
-                fontSize: 18
-            }
-        },
-        tooltip: {
-            trigger: 'item',
-            formatter: '{a} <br/>{b}: {c} ({d}%)'
-        },
-        color: ['#D03139', '#FFD40D', '0D6EfD'],
+        ],
         series: [
             {
+                name: 'Ventas',
+                type: 'line',
+                data: ventas,
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 8,
+                itemStyle: { color: PIZZA.red },
+                lineStyle:  { width: 3, color: PIZZA.red },
+                areaStyle:  { color: PIZZA.lightRed },
+            },
+            {
+                name: 'Ganancias (S/.)',
+                type: 'line',
+                yAxisIndex: 1,
+                data: ganancias,
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 8,
+                itemStyle: { color: '#4CAF50' },
+                lineStyle:  { width: 3, color: '#4CAF50' },
+            },
+        ],
+        grid: { left: '3%', right: '5%', bottom: '15%', top: '8%', containLabel: true },
+        animation: true,
+        animationDuration: 1200,
+    });
+
+    // ── Gráfico circular pagos ──────────────────────────────────
+    const chartDataPagos = {{ data_pagos|safe }};
+    const elCircular = document.getElementById('graficoCircularPagos');
+
+    if (chartDataPagos.length > 0) {
+        const graficoCircular = echarts.init(elCircular);
+        graficoCircular.setOption({
+            tooltip: {
+                trigger: 'item',
+                ...ECHART_TOOLTIP,
+                formatter: '{b}: {c} ({d}%)',
+            },
+            color: PIZZA.series,
+            series: [{
                 name: 'Métodos de Pago',
                 type: 'pie',
-                radius: '80%',
-                center: ['50%', '45%'],
+                radius: ['45%', '75%'],
+                center: ['50%', '50%'],
                 data: chartDataPagos.map(item => ({ name: item[0], value: item[1] })),
                 emphasis: {
-                    itemStyle: {
-                        shadowBlur: 10,
-                        shadowOffsetX: 0,
-                        shadowColor: 'rgba(0, 0, 0, 0.5)'
-                    }
+                    itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' },
                 },
                 label: {
-                    formatter: '{b}: {d}%'
-                }
-            }
-        ]
-    };
-    graficoCircularPagos.setOption(optionCircular);
+                    formatter: '{b}: {d}%',
+                    color: PIZZA.textPrimary,
+                },
+                itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+            }],
+            animation: true,
+            animationDuration: 1200,
+        });
+
+        // Registrar para resize
+        window.__echartsInstances = window.__echartsInstances || [];
+        window.__echartsInstances.push(graficoCircular);
+    } else {
+        elCircular.innerHTML = '<p class="text-center text-muted pt-5">Sin datos de pagos</p>';
+    }
+
+    // ── Resize limpio ───────────────────────────────────────────
+    window.__echartsInstances = window.__echartsInstances || [];
+    window.__echartsInstances.push(graficoLineal);
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            window.__echartsInstances.forEach(c => {
+                if (c && !c.isDisposed()) c.resize();
+            });
+        }, 150);
+    });
+})();
 </script>
+
 {% endblock %}

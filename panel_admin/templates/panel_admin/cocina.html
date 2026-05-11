@@ -1,0 +1,303 @@
+{% extends 'panel_admin/admin_base.html' %}
+{% load static %}
+
+{% block titulo %}Panel de Cocina{% endblock %}
+
+{% block contenido %}
+<style>
+.cocina-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #E31E24, #FF6B35);
+    border-radius: 20px;
+    margin-bottom: 1.5rem;
+    color: white;
+    box-shadow: 0 8px 30px rgba(227,30,36,0.25);
+}
+.cocina-header h1 { font-size: 1.8rem; font-weight: 900; margin: 0; display: flex; align-items: center; gap: 0.75rem; }
+.cocina-controles { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.cocina-controles select {
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.15);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.cocina-controles select option { color: #1a1a1a; background: white; }
+.polling-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.polling-dot { width: 10px; height: 10px; border-radius: 50%; background: #4CAF50; animation: blink 1.5s ease-in-out infinite; }
+.polling-dot.error { background: #f44336; animation: none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.kanban-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; align-items: start; }
+@media (max-width: 1200px) { .kanban-board { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 650px)  { .kanban-board { grid-template-columns: 1fr; } }
+
+.kanban-col { background: #FAFAFA; border-radius: 18px; border: 2px solid #E5E5E5; overflow: hidden; min-height: 300px; }
+.kanban-col-header { padding: 1rem 1.25rem; font-weight: 800; font-size: 1rem; display: flex; align-items: center; justify-content: space-between; color: white; }
+.kanban-col-header .count { background: rgba(255,255,255,0.3); border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.85rem; font-weight: 700; }
+.kanban-cards { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+.pedido-card { background: white; border-radius: 14px; border: 2px solid #E5E5E5; box-shadow: 0 3px 12px rgba(0,0,0,0.06); transition: transform 0.2s, box-shadow 0.2s; overflow: hidden; }
+.pedido-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
+.pedido-card-header { padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #F5F5F5; }
+.pedido-codigo { font-weight: 800; font-size: 0.9rem; color: #E31E24; }
+.pedido-tipo { font-size: 0.8rem; font-weight: 700; padding: 0.3rem 0.7rem; border-radius: 20px; }
+.tipo-delivery { background: #E3F2FD; color: #1565C0; }
+.tipo-recojo   { background: #F3E5F5; color: #6A1B9A; }
+
+.pedido-card-body { padding: 0.85rem 1rem; }
+.pedido-info-row { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.85rem; color: #555; margin-bottom: 0.4rem; }
+.pedido-info-row i { color: #E31E24; width: 16px; text-align: center; flex-shrink: 0; margin-top: 2px; }
+.pedido-info-row strong { color: #1a1a1a; }
+
+.pedido-items { margin: 0.75rem 0; padding: 0.6rem 0.8rem; background: #FFF8F8; border-radius: 10px; border-left: 4px solid #E31E24; }
+.pedido-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; padding: 0.2rem 0; color: #333; }
+.pedido-item-qty { background: #E31E24; color: white; border-radius: 6px; padding: 0.1rem 0.5rem; font-weight: 700; font-size: 0.78rem; min-width: 24px; text-align: center; }
+
+.pedido-timer { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; padding: 0.3rem 0.6rem; border-radius: 8px; margin-top: 0.5rem; }
+.timer-ok      { background: #E8F5E9; color: #2E7D32; }
+.timer-warning { background: #FFF8E1; color: #F57F17; }
+.timer-alert   { background: #FFEBEE; color: #C62828; }
+
+.pedido-total { text-align: right; font-weight: 800; font-size: 1rem; color: #E31E24; margin-top: 0.5rem; }
+
+.pedido-actions { padding: 0.75rem 1rem; border-top: 2px solid #F5F5F5; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.btn-accion { flex: 1; padding: 0.55rem 0.5rem; border: none; border-radius: 10px; font-weight: 700; font-size: 0.78rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.35rem; min-width: 80px; }
+.btn-accion:hover    { transform: translateY(-2px); filter: brightness(1.08); }
+.btn-accion:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-confirmar { background: #9C27B0; color: white; }
+.btn-preparar  { background: #FF6B35; color: white; }
+.btn-camino    { background: #2196F3; color: white; }
+.btn-entregar  { background: #4CAF50; color: white; }
+.btn-cancelar  { background: #F5F5F5; color: #666; border: 1px solid #ddd; font-size: 0.72rem; }
+
+.kanban-empty { text-align: center; padding: 2rem 1rem; color: #AAA; font-size: 0.9rem; }
+.kanban-empty i { font-size: 2rem; display: block; margin-bottom: 0.5rem; opacity: 0.4; }
+
+.delivery-address { background: #E3F2FD; border-radius: 8px; padding: 0.4rem 0.7rem; font-size: 0.8rem; color: #1565C0; font-weight: 600; margin-top: 0.4rem; display: flex; align-items: flex-start; gap: 0.4rem; }
+</style>
+
+<div class="cocina-header">
+    <h1><i class="bi bi-fire"></i> Panel de Cocina</h1>
+    <div class="cocina-controles">
+        <select id="filtroSucursal">
+            <option value="">Todas las sucursales</option>
+            {% for s in sucursales %}
+            <option value="{{ s.id_sucursal }}">{{ s.nombre }} - {{ s.direccion }}</option>
+            {% endfor %}
+        </select>
+        <select id="filtroTipo">
+            <option value="">Todos los tipos</option>
+            <option value="delivery">Delivery</option>
+            <option value="recojo">Recojo</option>
+        </select>
+        <div class="polling-indicator">
+            <div class="polling-dot" id="pollingDot"></div>
+            <span id="pollingStatus">Conectando...</span>
+        </div>
+    </div>
+</div>
+
+<div class="kanban-board" id="kanbanBoard">
+    {% for col in columnas %}
+    <div class="kanban-col" id="col-{{ col.key }}">
+        <div class="kanban-col-header" style="background:{{ col.color }};">
+            <span><i class="bi {{ col.icon }} me-2"></i>{{ col.label }}</span>
+            <span class="count" id="count-{{ col.key }}">0</span>
+        </div>
+        <div class="kanban-cards" id="cards-{{ col.key }}">
+            <div class="kanban-empty"><i class="bi bi-inbox"></i><br>Sin pedidos</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+(function () {
+    var CSRF = '{{ csrf_token }}';
+    // Estados reales del modelo Pedido (excluye entregado y cancelado)
+    var COLUMNAS = ['pendiente', 'confirmado', 'preparando', 'en_camino'];
+    var POLL_MS  = 15000;
+    var pollingTimer = null;
+    var cambiando = {};
+
+    var dot    = document.getElementById('pollingDot');
+    var status = document.getElementById('pollingStatus');
+    var filtroSucursal = document.getElementById('filtroSucursal');
+    var filtroTipo     = document.getElementById('filtroTipo');
+
+    function getApiUrl() {
+        var params = new URLSearchParams();
+        if (filtroSucursal.value) params.set('sucursal', filtroSucursal.value);
+        if (filtroTipo.value)     params.set('tipo', filtroTipo.value);
+        var qs = params.toString();
+        return '/panel_admin/cocina/pedidos/' + (qs ? '?' + qs : '');
+    }
+
+    function fetchPedidos() {
+        fetch(getApiUrl())
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                dot.classList.remove('error');
+                var t = new Date();
+                status.textContent = 'Actualizado ' + t.toLocaleTimeString('es-PE', {hour:'2-digit', minute:'2-digit'});
+                renderKanban(data.pedidos);
+            })
+            .catch(function(err) {
+                dot.classList.add('error');
+                status.textContent = 'Sin conexion (' + err.message + ')';
+            });
+    }
+
+    function renderKanban(pedidos) {
+        var grupos = {};
+        COLUMNAS.forEach(function(k) { grupos[k] = []; });
+
+        pedidos.forEach(function(p) {
+            if (grupos[p.estado] !== undefined) {
+                grupos[p.estado].push(p);
+            }
+        });
+
+        COLUMNAS.forEach(function(estado) {
+            var container = document.getElementById('cards-' + estado);
+            var countEl   = document.getElementById('count-' + estado);
+            if (!container || !countEl) return;
+
+            var lista = grupos[estado];
+            countEl.textContent = lista.length;
+
+            if (lista.length === 0) {
+                container.innerHTML = '<div class="kanban-empty"><i class="bi bi-inbox"></i><br>Sin pedidos</div>';
+                return;
+            }
+
+            var newIds = {};
+            lista.forEach(function(p) { newIds[String(p.id)] = p; });
+
+            Array.from(container.querySelectorAll('.pedido-card')).forEach(function(el) {
+                if (!newIds[el.dataset.id]) el.remove();
+            });
+
+            lista.forEach(function(pedido) {
+                var existing = container.querySelector('[data-id="' + pedido.id + '"]');
+                var hash = hashPedido(pedido);
+                if (!existing) {
+                    var tmp = document.createElement('div');
+                    tmp.innerHTML = buildCard(pedido);
+                    container.appendChild(tmp.firstChild);
+                } else if (existing.dataset.hash !== hash) {
+                    var tmp2 = document.createElement('div');
+                    tmp2.innerHTML = buildCard(pedido);
+                    existing.replaceWith(tmp2.firstChild);
+                }
+            });
+
+            var emptyEl = container.querySelector('.kanban-empty');
+            if (emptyEl) emptyEl.remove();
+        });
+    }
+
+    function hashPedido(p) {
+        return p.estado + '|' + p.minutos_esperando + '|' + p.items.length;
+    }
+
+    function buildCard(p) {
+        var timerClass = p.minutos_esperando < 15 ? 'timer-ok' : p.minutos_esperando < 30 ? 'timer-warning' : 'timer-alert';
+        var timerIcon  = p.minutos_esperando < 15 ? 'bi-clock' : 'bi-exclamation-triangle-fill';
+        var tipoClass  = p.tipo_entrega === 'delivery' ? 'tipo-delivery' : 'tipo-recojo';
+        var tipoLabel  = p.tipo_entrega === 'delivery' ? '🛵 Delivery' : '🏃 Recojo';
+
+        var itemsHTML = p.items.map(function(i) {
+            return '<div class="pedido-item"><span>' + i.nombre + '</span><span class="pedido-item-qty">x' + i.cantidad + '</span></div>';
+        }).join('');
+
+        var addressHTML = '';
+        if (p.tipo_entrega === 'delivery' && p.direccion_entrega) {
+            addressHTML = '<div class="delivery-address"><i class="bi bi-geo-alt-fill"></i><span>' + p.direccion_entrega + '</span></div>';
+        }
+
+        var costoHTML = '';
+        if (p.tipo_entrega === 'delivery' && p.costo_delivery > 0) {
+            costoHTML = '<div class="pedido-info-row"><i class="bi bi-truck"></i><span>Costo delivery: <strong>S/. ' + p.costo_delivery.toFixed(2) + '</strong></span></div>';
+        }
+
+        return '<div class="pedido-card" data-id="' + p.id + '" data-hash="' + hashPedido(p) + '">' +
+            '<div class="pedido-card-header">' +
+                '<span class="pedido-codigo">#' + p.codigo + '</span>' +
+                '<span class="pedido-tipo ' + tipoClass + '">' + tipoLabel + '</span>' +
+            '</div>' +
+            '<div class="pedido-card-body">' +
+                '<div class="pedido-info-row"><i class="bi bi-person-fill"></i><span>Cliente: <strong>' + p.cliente + '</strong></span></div>' +
+                '<div class="pedido-info-row"><i class="bi bi-shop"></i><span>Sucursal: <strong>' + p.sucursal + '</strong></span></div>' +
+                '<div class="pedido-info-row"><i class="bi bi-clock"></i><span>Ingresó: <strong>' + p.fecha_pedido + '</strong></span></div>' +
+                costoHTML + addressHTML +
+                '<div class="pedido-items">' + itemsHTML + '</div>' +
+                '<div class="pedido-timer ' + timerClass + '"><i class="bi ' + timerIcon + '"></i> ' + p.minutos_esperando + ' min</div>' +
+                '<div class="pedido-total">Total: S/. ' + p.total.toFixed(2) + '</div>' +
+            '</div>' +
+            '<div class="pedido-actions">' + buildBotones(p) + '</div>' +
+        '</div>';
+    }
+
+    function buildBotones(p) {
+        var d = cambiando[p.id] ? 'disabled' : '';
+        // Flujo: pendiente → confirmado → preparando → en_camino → entregado
+        if (p.estado === 'pendiente') {
+            return '<button class="btn-accion btn-confirmar" ' + d + ' onclick="cambiarEstado(' + p.id + ',\'confirmado\')"><i class="bi bi-check2-circle"></i> Confirmar</button>' +
+                   '<button class="btn-accion btn-cancelar" ' + d + ' onclick="cambiarEstado(' + p.id + ',\'cancelado\')"><i class="bi bi-x-circle"></i> Cancelar</button>';
+        }
+        if (p.estado === 'confirmado') {
+            return '<button class="btn-accion btn-preparar" ' + d + ' onclick="cambiarEstado(' + p.id + ',\'preparando\')"><i class="bi bi-fire"></i> Preparar</button>' +
+                   '<button class="btn-accion btn-cancelar" ' + d + ' onclick="cambiarEstado(' + p.id + ',\'cancelado\')"><i class="bi bi-x-circle"></i> Cancelar</button>';
+        }
+        if (p.estado === 'preparando') {
+            return '<button class="btn-accion btn-camino" ' + d + ' onclick="cambiarEstado(' + p.id + ',\'en_camino\')"><i class="bi bi-truck"></i> En camino</button>';
+        }
+        if (p.estado === 'en_camino') {
+            return '<button class="btn-accion btn-entregar" ' + d + ' onclick="cambiarEstado(' + p.id + ',\'entregado\')"><i class="bi bi-bag-check-fill"></i> Entregar</button>';
+        }
+        return '';
+    }
+
+    window.cambiarEstado = function(id, nuevoEstado) {
+        if (cambiando[id]) return;
+        cambiando[id] = true;
+        document.querySelectorAll('[data-id="' + id + '"] .btn-accion').forEach(function(b) { b.disabled = true; });
+
+        fetch('/panel_admin/cocina/pedidos/' + id + '/estado/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ estado: nuevoEstado })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.ok) throw new Error(data.error || 'Error desconocido');
+            fetchPedidos();
+        })
+        .catch(function(err) { alert('Error al cambiar estado: ' + err.message); })
+        .finally(function() { cambiando[id] = false; });
+    };
+
+    function iniciarPolling() {
+        fetchPedidos();
+        clearInterval(pollingTimer);
+        pollingTimer = setInterval(fetchPedidos, POLL_MS);
+    }
+
+    filtroSucursal.addEventListener('change', iniciarPolling);
+    filtroTipo.addEventListener('change', iniciarPolling);
+    iniciarPolling();
+})();
+</script>
+{% endblock %}

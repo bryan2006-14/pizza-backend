@@ -4,7 +4,8 @@
 
 {% block contenido %}
 
-<div class="row custom-height mx-0 py-2">
+<div class="row mx-0 py-2">
+    {# ── Gráfico barras empleados ── #}
     <div class="col-lg-9 col-12 pt-3">
         <div class="contenedor-grafico grafico-xl chart-entrance">
             <div class="grafico-header">
@@ -20,136 +21,118 @@
                     </div>
                 </div>
             </div>
-            <div id="graficoBarrasVentasEmpleadoMeses" class="chart-container"></div>
+            <div id="graficoBarrasVentasEmpleadoMeses" style="width:100%; height:380px;"></div>
             <div class="grafico-stats">
                 <div class="stat-item">
-                    <div class="stat-valor">{{ empleado_top|default:"-" }}</div>
-                    <div class="stat-label">Empleado del Mes</div>
+                    <div class="stat-valor">{{ ventas_promedio_por_empleado|default:"0" }}</div>
+                    <div class="stat-label">Ventas Prom./Empleado</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-valor">{{ ventas_totales|default:"0" }}</div>
-                    <div class="stat-label">Ventas Totales</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-valor">{{ crecimiento|default:"0%" }}</div>
-                    <div class="stat-label">Crecimiento</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-valor">{{ meses_consecutivos|default:"0" }}</div>
-                    <div class="stat-label">Meses Líder</div>
+                    <div class="stat-valor">{{ tiempo_promedio_pedido|default:"0" }}h</div>
+                    <div class="stat-label">Tiempo Prom. Entrega</div>
                 </div>
             </div>
         </div>
     </div>
 
+    {# ── Top empleados por ingresos ── #}
     <div class="col-lg-3 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
                 <h3 class="grafico-titulo">
                     <i class="fas fa-medal"></i>
-                    Top Empleados - Ingresos
+                    Top Ingresos
                 </h3>
             </div>
-            <div class="chart-container d-flex flex-column justify-content-center">
+            <div class="d-flex flex-column justify-content-center h-100 pb-3">
                 {% if empleados_mas_ingresos %}
-                    <div class="chart-legend">
-                        {% for empleado in empleados_mas_ingresos %}
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: var(--pizza-gold);"></div>
-                            <span>{{ empleado.0 }}</span>
-                            <strong>${{ empleado.1 }}</strong>
-                        </div>
-                        {% endfor %}
+                <div class="chart-legend">
+                    {% for empleado in empleados_mas_ingresos %}
+                    <div class="legend-item">
+                        <div class="legend-color" style="background:#FFD700;"></div>
+                        <span>{{ empleado.0 }}</span>
+                        <strong>S/.{{ empleado.1 }}</strong>
                     </div>
+                    {% endfor %}
+                </div>
                 {% else %}
-                    <div class="grafico-loading">
-                        <div class="loading-spinner"></div>
-                        <div class="loading-text">Sin datos disponibles</div>
-                    </div>
+                <div class="grafico-loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Sin datos</div>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="row custom-height mx-0 py-2">
+<div class="row mx-0 py-2">
+    {# ── Empleados más eficaces ── #}
     <div class="col-lg-3 col-md-6 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
-                <h3 class="grafico-titulo">
-                    <i class="fas fa-bolt"></i>
-                    Empleados Más Eficaces
-                </h3>
+                <h3 class="grafico-titulo"><i class="fas fa-bolt"></i> Más Eficaces</h3>
             </div>
-            <div class="chart-container d-flex flex-column justify-content-center">
+            <div class="d-flex flex-column justify-content-center h-100 pb-3">
                 {% if empleados_mas_eficaces %}
-                    <div class="chart-legend">
-                        {% for empleado in empleados_mas_eficaces %}
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: var(--pizza-orange);"></div>
-                            <span>{{ empleado.0 }}</span>
-                            <strong>{{ empleado.1 }}min</strong>
-                        </div>
-                        {% endfor %}
+                <div class="chart-legend">
+                    {% for empleado in empleados_mas_eficaces %}
+                    <div class="legend-item">
+                        <div class="legend-color" style="background:#FF6B35;"></div>
+                        <span>{{ empleado.0 }}</span>
+                        <strong>{{ empleado.1 }} min</strong>
                     </div>
+                    {% endfor %}
+                </div>
                 {% else %}
-                    <div class="grafico-loading">
-                        <div class="loading-spinner"></div>
-                        <div class="loading-text">Sin datos disponibles</div>
-                    </div>
+                <div class="grafico-loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Sin datos</div>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
+    {# ── Estado de empleados (donut) ── #}
     <div class="col-lg-3 col-md-6 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
-                <h3 class="grafico-titulo">
-                    <i class="fas fa-chart-pie"></i>
-                    Estados de Empleados
-                </h3>
+                <h3 class="grafico-titulo"><i class="fas fa-chart-pie"></i> Estado</h3>
             </div>
-            <div id="graficoCircular" class="chart-container"></div>
+            <div id="graficoCircularEstados" style="width:100%; height:260px;"></div>
         </div>
     </div>
 
+    {# ── Ventas promedio por empleado ── #}
     <div class="col-lg-3 col-md-6 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
-                <h3 class="grafico-titulo">
-                    <i class="fas fa-chart-bar"></i>
-                    Ventas Promedio
-                </h3>
+                <h3 class="grafico-titulo"><i class="fas fa-chart-bar"></i> Ventas Promedio</h3>
             </div>
-            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+            <div class="d-flex flex-column justify-content-center align-items-center" style="min-height:200px;">
                 <div class="contenedor-texto text-center">
-                    <p class="color-numero mb-2">${{ ventas_promedio_por_empleado|default:"0" }}</p>
+                    <p class="color-numero mb-2">{{ ventas_promedio_por_empleado|default:"0" }}</p>
                     <div class="stat-label">Por Empleado</div>
                 </div>
-                <div class="performance-indicator performance-positive mt-3">
-                    <i class="fas fa-arrow-up"></i>+{{ crecimiento_ventas|default:"0" }}%
-                </div>
             </div>
         </div>
     </div>
 
+    {# ── Tiempo promedio de entrega ── #}
     <div class="col-lg-3 col-md-6 col-12 pt-3">
         <div class="contenedor-grafico grafico-md chart-entrance">
             <div class="grafico-header">
-                <h3 class="grafico-titulo">
-                    <i class="fas fa-clock"></i>
-                    Tiempo de Entrega
-                </h3>
+                <h3 class="grafico-titulo"><i class="fas fa-clock"></i> Tiempo Entrega</h3>
             </div>
-            <div class="chart-container d-flex flex-column justify-content-center align-items-center">
+            <div class="d-flex flex-column justify-content-center align-items-center" style="min-height:200px;">
                 <div class="contenedor-texto text-center">
                     <p class="color-numero mb-2">{{ tiempo_promedio_pedido|default:"0" }}</p>
-                    <div class="stat-label">Minutos Promedio</div>
+                    <div class="stat-label">Horas Promedio</div>
                 </div>
-                <div class="performance-indicator {% if tiempo_promedio_pedido <= 30 %}performance-positive{% else %}performance-negative{% endif %} mt-3">
-                    <i class="fas {% if tiempo_promedio_pedido <= 30 %}fa-arrow-down{% else %}fa-arrow-up{% endif %}"></i>
-                    {{ eficiencia|default:"0" }}%
+                <div class="performance-indicator {% if tiempo_promedio_pedido <= 2 %}performance-positive{% else %}performance-negative{% endif %} mt-3">
+                    <i class="fas {% if tiempo_promedio_pedido <= 2 %}fa-check{% else %}fa-exclamation{% endif %}"></i>
+                    {% if tiempo_promedio_pedido <= 2 %}En tiempo{% else %}Fuera de tiempo{% endif %}
                 </div>
             </div>
         </div>
@@ -157,252 +140,133 @@
 </div>
 
 <script>
-    const chartDataEmpleadosVentas = {{ data_empleados_mas_ventas|safe }};
-    const empleadosMasEficaces = {{ empleados_mas_eficaces|safe }};
-    const chartMeses = {{ meses|safe }};
-    
-    const arreglo_colores = [
-        "var(--pizza-red)", "var(--pizza-orange)", "var(--pizza-yellow)", "var(--pizza-gold)",
-        "#FF6787", "#FFB68C", "#B6D3E2", "#97ED97", "#55CBD3", "#D18BC0", 
-        "#F9D877", "#FE8E7B", "#C7EEFF", "#6384B3", "#7FBEAF", "#EE9B69"
+(function () {
+    const COLORES = [
+        '#E31E24','#FF6B35','#FDB913','#FFD700',
+        '#FF6787','#FFB68C','#B6D3E2','#97ED97',
+        '#55CBD3','#D18BC0','#F9D877','#FE8E7B',
     ];
 
-    const graficoBarras = echarts.init(document.getElementById('graficoBarrasVentasEmpleadoMeses'));
-    
-    const option = {
-        title: {
-            text: 'Rendimiento de Empleados por Mes',
-            subtext: 'Comparativa mensual de ventas',
-            left: 'center',
-            textStyle: {
-                color: 'var(--pizza-red)',
-                fontSize: 18,
-                fontWeight: 'bold'
-            },
-            subtextStyle: {
-                color: 'var(--text-secondary)',
-                fontSize: 14
-            }
-        },
+    const chartDataEmpleados = {{ data_empleados_mas_ventas|safe }};
+    const chartMeses         = {{ meses|safe }};
+
+    // ── Gráfico de barras apiladas ──────────────────────────────
+    const chartBarras = echarts.init(document.getElementById('graficoBarrasVentasEmpleadoMeses'));
+
+    chartBarras.setOption({
         tooltip: {
             trigger: 'axis',
-            axisPointer: {
-                type: 'shadow'
-            },
-            backgroundColor: 'var(--pizza-red)',
-            borderColor: 'var(--pizza-yellow)',
-            textStyle: {
-                color: 'white',
-                fontSize: 14
-            },
-            formatter: function(params) {
-                let result = `<strong>${params[0].name}</strong><br/>`;
-                params.forEach(item => {
-                    if (item.value > 0) {
-                        result += `<span style="display:inline-block;width:10px;height:10px;background:${item.color};border-radius:50%;margin-right:5px;"></span> ${item.seriesName}: $${item.value}<br/>`;
-                    }
+            axisPointer: { type: 'shadow' },
+            backgroundColor: '#E31E24',
+            borderColor:     '#FDB913',
+            textStyle:       { color: '#fff', fontSize: 13 },
+            formatter(params) {
+                let html = `<strong>${params[0].name}</strong><br/>`;
+                params.forEach(p => {
+                    if (p.value > 0)
+                        html += `<span style="display:inline-block;width:10px;height:10px;background:${p.color};border-radius:50%;margin-right:5px;"></span>${p.seriesName}: ${p.value}<br/>`;
                 });
-                return result;
-            }
+                return html;
+            },
         },
         legend: {
-            data: chartDataEmpleadosVentas.map(item => item[0]),
-            bottom: 10,
-            textStyle: {
-                color: 'var(--text-primary)',
-                fontSize: 11
-            }
+            data: chartDataEmpleados.map(e => e[0]),
+            bottom: 0,
+            textStyle: { color: '#1a1a1a', fontSize: 11 },
         },
         xAxis: {
             type: 'category',
             data: chartMeses,
-            axisLabel: {
-                color: 'var(--text-primary)',
-                fontSize: 11,
-                fontWeight: 'bold',
-                rotate: 30
-            },
-            axisLine: {
-                lineStyle: {
-                    color: 'var(--pizza-orange)'
-                }
-            }
+            axisLabel: { rotate: 30, color: '#1a1a1a', fontSize: 11, fontWeight: 'bold' },
+            axisLine:  { lineStyle: { color: '#FF6B35' } },
         },
         yAxis: {
             type: 'value',
-            name: 'Ventas ($)',
-            nameTextStyle: {
-                color: 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: 'bold'
-            },
-            axisLabel: {
-                color: 'var(--text-primary)',
-                fontSize: 11
-            },
-            axisLine: {
-                lineStyle: {
-                    color: 'var(--pizza-orange)'
-                }
-            },
-            splitLine: {
-                lineStyle: {
-                    color: 'var(--border-color)',
-                    type: 'dashed'
-                }
-            }
+            name: 'Pedidos',
+            axisLabel: { color: '#1a1a1a' },
+            splitLine: { lineStyle: { color: '#E5E5E5', type: 'dashed' } },
         },
-        series: chartDataEmpleadosVentas.map((empleado, index) => ({
+        series: chartDataEmpleados.map((empleado, idx) => ({
             name: empleado[0],
             type: 'bar',
-            stack: 'ventas',
+            stack: 'total',
+            data: chartMeses.map((_, i) => i === idx ? empleado[1] : 0),
+            itemStyle: {
+                color: COLORES[idx % COLORES.length],
+                borderRadius: [4, 4, 0, 0],
+                borderWidth: 1,
+                borderColor: '#fff',
+            },
             label: {
                 show: true,
                 position: 'inside',
-                color: 'white',
+                color: '#fff',
                 fontWeight: 'bold',
                 fontSize: 10,
-                formatter: function(params) {
-                    return params.value === 0 ? '' : `$${params.value}`;
-                }
+                formatter: p => p.value === 0 ? '' : p.value,
             },
-            itemStyle: {
-                color: arreglo_colores[index % arreglo_colores.length],
-                borderRadius: [4, 4, 0, 0],
-                borderWidth: 1,
-                borderColor: '#fff'
-            },
-            emphasis: {
-                itemStyle: {
-                    shadowBlur: 10,
-                    shadowColor: 'rgba(0, 0, 0, 0.3)'
-                }
-            },
-            data: chartMeses.map((_, i) => i === index ? empleado[1] : 0)
         })),
-        grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '15%',
-            top: '20%',
-            containLabel: true
-        },
+        grid: { left: '3%', right: '4%', bottom: '15%', top: '8%', containLabel: true },
         animation: true,
-        animationDuration: 1500,
-        animationEasing: 'elasticOut'
-    };
+        animationDuration: 1200,
+        animationEasing: 'elasticOut',
+    });
 
-    graficoBarras.setOption(option);
+    // ── Gráfico circular estados ────────────────────────────────
+    const estadoData = {{ estado_empleados|safe }};
+    const chartCircular = echarts.init(document.getElementById('graficoCircularEstados'));
 
-    /*************************************/
-    const chartDataEstadoEmpleados = {{ estado_empleados|safe }};
-    console.log('Datos de estado empleados:', chartDataEstadoEmpleados);
-    
-    const data = chartDataEstadoEmpleados.map(item => ({
-        value: item[1],
-        name: item[0]
-    }));
-
-    const graficoCircular = echarts.init(document.getElementById('graficoCircular'));
-
-    const optionCircular = {
-        title: {
-            text: 'Distribución por Estado',
-            subtext: 'Estado actual de empleados',
-            left: 'center',
-            textStyle: {
-                color: 'var(--pizza-red)',
-                fontSize: 16,
-                fontWeight: 'bold'
-            },
-            subtextStyle: {
-                color: 'var(--text-secondary)',
-                fontSize: 12
-            }
-        },
+    chartCircular.setOption({
         tooltip: {
             trigger: 'item',
-            backgroundColor: 'var(--pizza-red)',
-            borderColor: 'var(--pizza-yellow)',
-            textStyle: {
-                color: 'white',
-                fontSize: 14
-            },
-            formatter: function (params) {
-                return `<strong>${params.name}</strong><br/>
-                       Cantidad: <b>${params.value}</b><br/>
-                       Porcentaje: <b>${params.percent}%</b>`;
-            }
+            backgroundColor: '#E31E24',
+            borderColor:     '#FDB913',
+            textStyle:       { color: '#fff', fontSize: 13 },
+            formatter: p => `<strong>${p.name}</strong><br/>Cantidad: <b>${p.value}</b><br/>Porcentaje: <b>${p.percent}%</b>`,
         },
+        color: COLORES,
         series: [{
             type: 'pie',
-            radius: ['50%', '80%'],
-            data: data,
+            radius: ['45%', '78%'],
+            data: estadoData.map(item => ({ value: item[1], name: item[0] })),
             emphasis: {
-                itemStyle: {
-                    shadowBlur: 15,
-                    shadowOffsetX: 0,
-                    shadowColor: 'rgba(0, 0, 0, 0.5)'
-                }
+                itemStyle: { shadowBlur: 15, shadowColor: 'rgba(0,0,0,0.4)' },
             },
             label: {
                 show: true,
                 formatter: '{b}: {c}',
-                color: 'var(--text-primary)',
+                color: '#1a1a1a',
                 fontWeight: 'bold',
-                fontSize: 11
+                fontSize: 11,
             },
-            labelLine: {
-                show: true,
-                length: 10,
-                length2: 15
-            },
-            itemStyle: {
-                borderRadius: 8,
-                borderColor: '#fff',
-                borderWidth: 2
-            }
+            itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
         }],
-        color: arreglo_colores,
         animation: true,
-        animationDuration: 1500
-    };
-
-    graficoCircular.setOption(optionCircular);
-
-    // Responsive handling
-    window.addEventListener('resize', function() {
-        graficoBarras.resize();
-        graficoCircular.resize();
+        animationDuration: 1200,
     });
 
-    // Time selector functionality
+    // ── Registro global para resize ─────────────────────────────
+    window.__echartsInstances = window.__echartsInstances || [];
+    window.__echartsInstances.push(chartBarras, chartCircular);
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            window.__echartsInstances.forEach(c => {
+                if (c && !c.isDisposed()) c.resize();
+            });
+        }, 150);
+    });
+
+    // ── Selector de período (visual, los datos reales vienen del servidor) ──
     document.querySelectorAll('.btn-tiempo').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             document.querySelectorAll('.btn-tiempo').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            
-            // Aquí puedes agregar la lógica para actualizar los datos según el período seleccionado
-            console.log('Período seleccionado:', this.textContent);
         });
     });
+})();
 </script>
-
-<style>
-    .custom-height {
-        min-height: calc(100vh - 100px);
-    }
-    
-    #graficoBarrasVentasEmpleadoMeses,
-    #graficoCircular {
-        width: 100%;
-        height: 100%;
-        border-radius: 15px;
-    }
-    
-    .contenedor-texto .color-numero {
-        font-size: 3rem !important;
-    }
-</style>
 
 {% endblock %}

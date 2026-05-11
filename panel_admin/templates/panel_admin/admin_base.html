@@ -1,7 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,255 +8,277 @@
     <title>{% block titulo %}Panel de Administrador{% endblock %}</title>
     <link rel="icon" href="{% static 'panel_admin/images/favicon.ico' %}" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="{% static 'panel_admin/css/style.css' %}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
-        integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+          integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 </head>
-
 <body>
 
-    <div class="wrapper">
-        <aside id="sidebar">
-            <div class="d-flex">
-                <button class="toggle-btn py-2" type="button">
-                    <!--<i class="bi bi-x-lg"></i>-->
-                    <i class="bi bi-list"></i>
-                </button>
-                <div class="sidebar-logo">
-                    <a href="#" style="white-space: nowrap;">Happy Pizza</a>
-                </div>
+{# ── Mensajes Django serializados para que script.js los lea sin template tags dentro de JS ── #}
+<div id="django-messages" aria-hidden="true" style="display:none">
+    {% for message in messages %}
+    <span data-level="{{ message.tags }}" data-text="{{ message|escapejs }}"></span>
+    {% endfor %}
+</div>
+
+<div class="wrapper">
+    <aside id="sidebar" aria-label="Navegación principal">
+        <div class="d-flex">
+            <button class="toggle-btn py-2" type="button"
+                    aria-controls="sidebar"
+                    aria-expanded="false"
+                    aria-label="Abrir o cerrar menú lateral">
+                <i class="bi bi-list" aria-hidden="true"></i>
+            </button>
+            <div class="sidebar-logo">
+                <a href="{% url 'admin_ventas' %}" style="white-space:nowrap;">Happy Pizza</a>
             </div>
-            <ul class="sidebar-nav pt-0">
-                <li class="sidebar-item">
-                    <a href="{% url 'admin_ventas' %}"
-                        class="sidebar-link {% if request.path == '/panel_admin/ventas/' %}active{% endif %}"
-                        data-tooltip="Ventas">
-                        <i class="fa-solid fa-chart-simple"></i>
-                        <span>Ventas</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="#"
-                        class="sidebar-link collapsed has-dropdown {% if 'clientes' in request.path %}active{% endif %}"
-                        data-bs-toggle="collapse" data-bs-target="#clientes" aria-expanded="false"
-                        aria-controls="clientes" data-tooltip="Clientes">
-                        <i class="bi bi-people-fill"></i>
-                        <span>Clientes</span>
-                    </a>
-
-                    <ul id="clientes" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
-                        <li class="sidebar-item">
-                            <a href="{% url 'admin_clientes' %}" class="sidebar-link">Info Clientes</a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{% url 'clientes_lista' %}" class="sidebar-link">Crud Clientes</a>
-                        </li>
-                    </ul>
-                </li>
-
-
-                <li class="sidebar-item">
-                    <a href="#"
-                        class="sidebar-link collapsed has-dropdown {% if 'empleados' in request.path %}active{% endif %}"
-                        data-bs-toggle="collapse" data-bs-target="#empleados" aria-expanded="false"
-                        aria-controls="empleados" data-tooltip="Empleados">
-                        <i class="fa-solid fa-clipboard-user"></i>
-                        <span>Empleados</span>
-                    </a>
-                    <ul id="empleados" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
-                        <li class="sidebar-item">
-                            <a href="{% url 'admin_empleados' %}" class="sidebar-link">Info empleados</a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{% url 'empleados_lista' %}" class="sidebar-link">Crud empleados</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="#"
-                        class="sidebar-link collapsed has-dropdown {% if 'sucursales' in request.path %}active{% endif %}"
-                        data-bs-toggle="collapse" data-bs-target="#sucursales" aria-expanded="false"
-                        aria-controls="sucursales" data-tooltip="Sucursales">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                        <span>Sucursales</span>
-                    </a>
-                    <ul id="sucursales" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
-                        <li class="sidebar-item">
-                            <a href="{% url 'admin_sucursales' %}" class="sidebar-link">Info Sucursal</a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{% url 'sucursales_lista' %}" class="sidebar-link">Crud Sucursal</a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{% url 'inventariossucursal_lista' %}" class="sidebar-link">Inventario por
-                                Sucursal</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="#"
-                        class="sidebar-link collapsed has-dropdown {% if 'productos' in request.path and not 'productos_lista' in request.path %}active{% endif %}"
-                        data-bs-toggle="collapse" data-bs-target="#productos" aria-expanded="false"
-                        aria-controls="productos" data-tooltip="Productos">
-                        <i class="fa-solid fa-pizza-slice"></i>
-                        <span>Productos</span>
-                    </a>
-                    <ul id="productos" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
-                        <li class="sidebar-item">
-                            <a href="{% url 'admin_productos' %}" class="sidebar-link">Info Productos</a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{% url 'productos_lista' %}" class="sidebar-link">Crud Productos</a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{% url 'productosvariantes_lista' %}" class="sidebar-link">Crud Variantes</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'categorias_lista' %}"
-                        class="sidebar-link {% if 'categoria' in request.path %}active{% endif %}"
-                        data-tooltip="Categorías">
-                        <i class="fa-solid fa-bookmark"></i>
-                        <span>Categorías</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="#"
-                        class="sidebar-link collapsed has-dropdown {% if 'promociones' in request.path %}active{% endif %}"
-                        data-bs-toggle="collapse" data-bs-target="#promociones" aria-expanded="false"
-                        aria-controls="promociones" data-tooltip="Promociones">
-                        <i class="fa-solid fa-star"></i>
-                        <span>Promociones</span>
-                    </a>
-                    <ul id="promociones" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
-                        <li class="sidebar-item">
-                            <a href="{% url 'promociones_lista' %}" class="sidebar-link">Crud Promociones</a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{% url 'promocionesdetalle_lista' %}" class="sidebar-link">Crud Detalle Promos</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'pedidos_lista' %}"
-                        class="sidebar-link {% if 'pedidos_lista' in request.path %}active{% endif %}"
-                        data-tooltip="Pedidos">
-                        <i class="bi bi-bag-fill"></i>
-                        <span>Pedidos</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'pedidositems_lista' %}"
-                        class="sidebar-link {% if 'pedidositems_lista' in request.path %}active{% endif %}"
-                        data-tooltip="Items de Pedidos">
-                        <i class="bi bi-bag-plus-fill"></i>
-                        <span>Items de Pedidos</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'pagos_lista' %}"
-                        class="sidebar-link {% if 'pagos' in request.path %}active{% endif %}" data-tooltip="Pagos">
-                        <i class="fa-solid fa-coins"></i>
-                        <span>Pagos</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'historial_lista' %}"
-                        class="sidebar-link {% if 'historial' in request.path %}active{% endif %}"
-                        data-tooltip="Historial">
-                        <i class="fa-regular fa-rectangle-list"></i>
-                        <span>Historial</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{% url 'usuarioadmins_lista' %}"
-                        class="sidebar-link {% if 'usuarioadmin' in request.path %}active{% endif %}"
-                        data-tooltip="Admins">
-                        <i class="fa-solid fa-user-tie"></i>
-                        <span>Agregar Admin</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="#"
-                        class="sidebar-link collapsed has-dropdown {% if 'carritos' in request.path %}active{% endif %}"
-                        data-bs-toggle="collapse" data-bs-target="#carritos" aria-expanded="false"
-                        aria-controls="carritos" data-tooltip="Carritos">
-                        <i class="bi bi-cart"></i>
-                        <span>Carritos</span>
-                    </a>
-                    <ul id="carritos" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
-                        <li class="sidebar-item">
-                            <a href="{% url 'carritos_lista' %}" class="sidebar-link">Listado Carritos</a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="{% url 'carritositems_lista' %}" class="sidebar-link">Items en Carritos</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="#" class="sidebar-link" data-tooltip="Cerrar"
-                        onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                        <i class="bi bi-box-arrow-left"></i>
-                        <span>Cerrar sesión</span>
-                    </a>
-                    <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
-                        {% csrf_token %}
-                    </form>
-                </li>
-            </ul>
-        </aside>
-
-
-        <div class="main" id="contenido_principal">
-            {% block contenido %}
-            {% endblock %}
         </div>
 
-    </div>
-    <script>
-        function resizeTextToFit() {
-            const containers = document.querySelectorAll('.contenedor-texto');
-            const texts = document.querySelectorAll('.color-numero');
+        <ul class="sidebar-nav pt-0" role="menubar">
 
-            for (let i = 0; i < containers.length; i++) {
-                const container = containers[i];
-                const text = texts[i];
-                text.style.fontSize = '90px';
-                while (text.scrollWidth > container.clientWidth) {
-                    const currentSize = parseFloat(window.getComputedStyle(text).fontSize);
-                    text.style.fontSize = (currentSize - 1) + 'px';
-                }
+            <li class="sidebar-item" role="none">
+                <a href="{% url 'admin_ventas' %}"
+                   class="sidebar-link {% if request.path == '/panel_admin/ventas/' %}active{% endif %}"
+                   data-tooltip="Ventas" role="menuitem">
+                    <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
+                    <span>Ventas</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="#"
+                   class="sidebar-link collapsed has-dropdown {% if 'clientes' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" data-bs-target="#clientes"
+                   aria-expanded="false" aria-controls="clientes"
+                   data-tooltip="Clientes" role="menuitem">
+                    <i class="bi bi-people-fill" aria-hidden="true"></i>
+                    <span>Clientes</span>
+                </a>
+                <ul id="clientes" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar" role="menu">
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'admin_clientes' %}" class="sidebar-link" role="menuitem">Info Clientes</a>
+                    </li>
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'clientes_lista' %}" class="sidebar-link" role="menuitem">Crud Clientes</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="#"
+                   class="sidebar-link collapsed has-dropdown {% if 'empleados' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" data-bs-target="#empleados"
+                   aria-expanded="false" aria-controls="empleados"
+                   data-tooltip="Empleados" role="menuitem">
+                    <i class="fa-solid fa-clipboard-user" aria-hidden="true"></i>
+                    <span>Empleados</span>
+                </a>
+                <ul id="empleados" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar" role="menu">
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'admin_empleados' %}" class="sidebar-link" role="menuitem">Info empleados</a>
+                    </li>
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'empleados_lista' %}" class="sidebar-link" role="menuitem">Crud empleados</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="#"
+                   class="sidebar-link collapsed has-dropdown {% if 'sucursales' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" data-bs-target="#sucursales"
+                   aria-expanded="false" aria-controls="sucursales"
+                   data-tooltip="Sucursales" role="menuitem">
+                    <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+                    <span>Sucursales</span>
+                </a>
+                <ul id="sucursales" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar" role="menu">
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'admin_sucursales' %}" class="sidebar-link" role="menuitem">Info Sucursal</a>
+                    </li>
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'sucursales_lista' %}" class="sidebar-link" role="menuitem">Crud Sucursal</a>
+                    </li>
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'inventariossucursal_lista' %}" class="sidebar-link" role="menuitem">Inventario por Sucursal</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="#"
+                   class="sidebar-link collapsed has-dropdown {% if 'productos' in request.path and not 'productos_lista' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" data-bs-target="#productos"
+                   aria-expanded="false" aria-controls="productos"
+                   data-tooltip="Productos" role="menuitem">
+                    <i class="fa-solid fa-pizza-slice" aria-hidden="true"></i>
+                    <span>Productos</span>
+                </a>
+                <ul id="productos" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar" role="menu">
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'admin_productos' %}" class="sidebar-link" role="menuitem">Info Productos</a>
+                    </li>
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'productos_lista' %}" class="sidebar-link" role="menuitem">Crud Productos</a>
+                    </li>
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'productosvariantes_lista' %}" class="sidebar-link" role="menuitem">Crud Variantes</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="{% url 'categorias_lista' %}"
+                   class="sidebar-link {% if 'categoria' in request.path %}active{% endif %}"
+                   data-tooltip="Categorías" role="menuitem">
+                    <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                    <span>Categorías</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="#"
+                   class="sidebar-link collapsed has-dropdown {% if 'promociones' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" data-bs-target="#promociones"
+                   aria-expanded="false" aria-controls="promociones"
+                   data-tooltip="Promociones" role="menuitem">
+                    <i class="fa-solid fa-star" aria-hidden="true"></i>
+                    <span>Promociones</span>
+                </a>
+                <ul id="promociones" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar" role="menu">
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'promociones_lista' %}" class="sidebar-link" role="menuitem">Crud Promociones</a>
+                    </li>
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'promocionesdetalle_lista' %}" class="sidebar-link" role="menuitem">Crud Detalle Promos</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="{% url 'cocina' %}"
+                   class="sidebar-link {% if 'cocina' in request.path %}active{% endif %}"
+                   data-tooltip="Cocina" role="menuitem">
+                    <i class="bi bi-fire" aria-hidden="true"></i>
+                    <span>Cocina</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="{% url 'pedidos_lista' %}"
+                   class="sidebar-link {% if 'pedidos_lista' in request.path %}active{% endif %}"
+                   data-tooltip="Pedidos" role="menuitem">
+                    <i class="bi bi-bag-fill" aria-hidden="true"></i>
+                    <span>Pedidos</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="{% url 'pedidositems_lista' %}"
+                   class="sidebar-link {% if 'pedidositems_lista' in request.path %}active{% endif %}"
+                   data-tooltip="Items de Pedidos" role="menuitem">
+                    <i class="bi bi-bag-plus-fill" aria-hidden="true"></i>
+                    <span>Items de Pedidos</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="{% url 'pagos_lista' %}"
+                   class="sidebar-link {% if 'pagos' in request.path %}active{% endif %}"
+                   data-tooltip="Pagos" role="menuitem">
+                    <i class="fa-solid fa-coins" aria-hidden="true"></i>
+                    <span>Pagos</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="{% url 'historial_lista' %}"
+                   class="sidebar-link {% if 'historial' in request.path %}active{% endif %}"
+                   data-tooltip="Historial" role="menuitem">
+                    <i class="fa-regular fa-rectangle-list" aria-hidden="true"></i>
+                    <span>Historial</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="{% url 'usuarioadmins_lista' %}"
+                   class="sidebar-link {% if 'usuarioadmin' in request.path %}active{% endif %}"
+                   data-tooltip="Admins" role="menuitem">
+                    <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
+                    <span>Agregar Admin</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="#"
+                   class="sidebar-link collapsed has-dropdown {% if 'carritos' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" data-bs-target="#carritos"
+                   aria-expanded="false" aria-controls="carritos"
+                   data-tooltip="Carritos" role="menuitem">
+                    <i class="bi bi-cart" aria-hidden="true"></i>
+                    <span>Carritos</span>
+                </a>
+                <ul id="carritos" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar" role="menu">
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'carritos_lista' %}" class="sidebar-link" role="menuitem">Listado Carritos</a>
+                    </li>
+                    <li class="sidebar-item" role="none">
+                        <a href="{% url 'carritositems_lista' %}" class="sidebar-link" role="menuitem">Items en Carritos</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="sidebar-item" role="none">
+                <a href="#" class="sidebar-link" data-tooltip="Cerrar sesión"
+                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                   role="menuitem">
+                    <i class="bi bi-box-arrow-left" aria-hidden="true"></i>
+                    <span>Cerrar sesión</span>
+                </a>
+                <form id="logout-form" action="{% url 'logout' %}" method="post" style="display:none;">
+                    {% csrf_token %}
+                </form>
+            </li>
+
+        </ul>
+    </aside>
+
+    <div class="main" id="contenido_principal">
+        {% block contenido %}{% endblock %}
+    </div>
+</div>
+
+<script>
+    function resizeTextToFit() {
+        const containers = document.querySelectorAll('.contenedor-texto');
+        const texts = document.querySelectorAll('.color-numero');
+        for (let i = 0; i < containers.length; i++) {
+            const container = containers[i];
+            const text = texts[i];
+            if (!text) continue;
+            text.style.fontSize = '90px';
+            while (text.scrollWidth > container.clientWidth && parseFloat(text.style.fontSize) > 16) {
+                text.style.fontSize = (parseFloat(text.style.fontSize) - 1) + 'px';
             }
         }
-        window.onload = resizeTextToFit;
-        window.onresize = resizeTextToFit;
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{% static 'panel_admin/js/script.js' %}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
-        crossorigin="anonymous"></script>
-</body>
+    }
+    window.addEventListener('load', resizeTextToFit);
+    window.addEventListener('resize', resizeTextToFit);
+</script>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script src="{% static 'panel_admin/js/script.js' %}" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
+        crossorigin="anonymous" defer></script>
+</body>
 </html>
