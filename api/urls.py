@@ -79,4 +79,8 @@ urlpatterns = [
     # PAGOS
     path('pagos/<str:columna>/<str:valor_a_buscar>/', PagoSearchView.as_view(), name='search-pago'),
     
+    # MERCADO PAGO
+    path('mercadopago/preference/', MercadoPagoPreferenceView.as_view(), name='mercadopago-preference'),
+    path('mercadopago-webhook/', MercadoPagoWebhookView.as_view(), name='mercadopago-webhook'),
+    
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

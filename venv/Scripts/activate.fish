@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV 'C:\Users\nala4\Downloads\happy_pizza_proyect\pizza-backend\venv'
+set -gx VIRTUAL_ENV 'C:\Users\MICHAEL\Documents\pizza_total\pizza-backend\venv'
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"Scripts $PATH

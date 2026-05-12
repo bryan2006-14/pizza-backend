@@ -13,6 +13,8 @@ from django.shortcuts import get_object_or_404
 from .models import *
 from .serializers import *
 from django.db import transaction
+import mercadopago
+from django.conf import settings
 
 
 # ====================================================
@@ -198,22 +200,28 @@ class PedidoListCreate(generics.ListCreateAPIView):
                 # 1. Verificar el item principal (si es variante simple)
                 if item.variante:
                     inv = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=item.variante).first()
-                    if not inv or inv.stock < item.cantidad:
-                        raise ValidationError({'error': f'Stock insuficiente para {item.variante.producto.nombre}'})
+                    if not inv:
+                        raise ValidationError({'error': f'El producto {item.variante.producto.nombre} ({item.variante.tamaño}) no está disponible en esta sucursal.'})
+                    if inv.stock < item.cantidad:
+                        raise ValidationError({'error': f'Stock insuficiente para {item.variante.producto.nombre}. Disponible: {inv.stock}'})
                 
                 # 2. Verificar la promoción (detalles fijos)
                 elif item.promocion:
                     detalles_fijos = PromocionDetalle.objects.filter(promocion=item.promocion, variante__isnull=False)
                     for detalle in detalles_fijos:
                         inv = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=detalle.variante).first()
-                        if not inv or inv.stock < (detalle.cantidad * item.cantidad):
-                            raise ValidationError({'error': f'Stock insuficiente para item de promo: {detalle.variante.producto.nombre}'})
+                        if not inv:
+                            raise ValidationError({'error': f'Un componente de la promo {item.promocion.titulo} no está disponible en esta sucursal.'})
+                        if inv.stock < (detalle.cantidad * item.cantidad):
+                            raise ValidationError({'error': f'Stock insuficiente para componente de promo: {detalle.variante.producto.nombre}'})
                 
-                # 3. Verificar las opciones elegidas (esto vale para ambos: extras, salsas, pizzas elegidas en promo)
+                # 3. Verificar las opciones elegidas
                 for opcion in item.opciones_promocion.all():
                     inv_opc = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=opcion.variante).first()
-                    if not inv_opc or inv_opc.stock < (opcion.cantidad * item.cantidad):
-                        raise ValidationError({'error': f'Stock insuficiente para extra/opción: {opcion.variante.producto.nombre}'})
+                    if not inv_opc:
+                         raise ValidationError({'error': f'La opción/extra {opcion.variante.producto.nombre} no está disponible en esta sucursal.'})
+                    if inv_opc.stock < (opcion.cantidad * item.cantidad):
+                        raise ValidationError({'error': f'Stock insuficiente para extra: {opcion.variante.producto.nombre}'})
 
             # Crear PedidoItems (esto ejecutará PedidoItem.save() que descuenta el stock)
             for item in items:
@@ -538,3 +546,116 @@ class InventarioSucursalSearchView(DynamicSearchView):
 class PagoSearchView(DynamicSearchView):
     def get_model_name(self):
         return 'Pago'
+
+
+# ====================================================
+# 💳 MERCADO PAGO INTEGRATION
+# ====================================================
+
+class MercadoPagoPreferenceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        pedido_id = request.data.get('id_pedido')
+        if not pedido_id:
+            return Response({"error": "ID de pedido no proporcionado"}, status=status.HTTP_400_BAD_REQUEST)
+
+        pedido = get_object_or_404(Pedido, id_pedido=pedido_id)
+        
+        # Calcular el total del pedido usando el serializador para ser consistentes
+        serializer = PedidoSerializer(pedido)
+        total_pedido = serializer.data.get('total')
+
+        # Validar total
+        if not total_pedido or float(total_pedido) <= 0:
+            return Response({"error": "El total del pedido debe ser mayor a 0"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Configurar Mercado Pago
+        sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
+
+        # Crear el item de la preferencia (SIMPLIFICADO AL MÁXIMO PARA DIAGNÓSTICO)
+        try:
+            total_float = float(total_pedido)
+            preference_data = {
+                "items": [
+                    {
+                        "title": f"Pizza Total - {pedido.codigo}",
+                        "quantity": 1,
+                        "unit_price": round(total_float, 2),
+                        "currency_id": "PEN"
+                    }
+                ],
+                "external_reference": str(pedido.id_pedido),
+            }
+            
+            print(f"DEBUG: Intentando crear preferencia con: {preference_data}")
+            
+            preference_response = sdk.preference().create(preference_data)
+            status_code = preference_response["status"]
+            preference = preference_response["response"]
+            
+            if status_code >= 400:
+                print(f"!!! ERROR CRITICO MP !!! Status: {status_code}")
+                print(f"Respuesta de MP: {preference}")
+                return Response({
+                    "error": "Error de validación en Mercado Pago",
+                    "detail": preference
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            print(f"!!! EXCEPCION MP !!!: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Guardar o actualizar la información del pago
+        pago, created = Pago.objects.update_or_create(
+            pedido=pedido,
+            defaults={
+                'monto': total_pedido,
+                'metodo_pago': 'tarjeta',
+                'mercado_pago_preference_id': preference['id']
+            }
+        )
+
+        return Response({
+            "preference_id": preference['id'],
+            "init_point": preference['init_point'] # Punto de inicio para el checkout pro si se desea
+        }, status=status.HTTP_200_OK)
+
+class MercadoPagoWebhookView(APIView):
+    permission_classes = [AllowAny] # Mercado Pago llama sin autenticacin Bearer
+
+    def post(self, request):
+        # El webhook de MP enva el ID del recurso
+        # Para simplificar y dado que es modo prueba, solo aceptamos la notificacin
+        # En produccin se debera validar el pago con sdk.payment().get(id)
+        
+        topic = request.query_params.get('topic')
+        resource_id = request.query_params.get('id') or request.data.get('data', {}).get('id')
+
+        if topic == 'payment' or request.data.get('type') == 'payment':
+            # Aqu deberamos consultar a MP por el estado real del pago
+            sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
+            payment_info = sdk.payment().get(resource_id)
+            payment_data = payment_info["response"]
+
+            external_reference = payment_data.get('external_reference')
+            status_mp = payment_data.get('status')
+
+            if external_reference:
+                try:
+                    pedido = Pedido.objects.get(id_pedido=external_reference)
+                    pago = Pago.objects.get(pedido=pedido)
+                    pago.mercado_pago_payment_id = resource_id
+                    
+                    if status_mp == 'approved':
+                        pago.estado = 'completado'
+                        pedido.estado = 'confirmado'
+                    elif status_mp in ['rejected', 'cancelled']:
+                        pago.estado = 'fallido'
+                    
+                    pago.save()
+                    pedido.save()
+                except (Pedido.DoesNotExist, Pago.DoesNotExist):
+                    pass
+
+        return Response(status=status.HTTP_200_OK)

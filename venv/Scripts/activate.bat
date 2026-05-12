@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set "VIRTUAL_ENV=C:\Users\nala4\Downloads\happy_pizza_proyect\pizza-backend\venv"
+set "VIRTUAL_ENV=C:\Users\MICHAEL\Documents\pizza_total\pizza-backend\venv"
 
 if not defined PROMPT set PROMPT=$P$G
 

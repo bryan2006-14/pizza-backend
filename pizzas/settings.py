@@ -16,7 +16,12 @@ import os
 from django.conf import settings
 import dj_database_url
 
-SITE_URL = 'https://elote.pythonanywhere.com'
+# SITE_URL = 'https://elote.pythonanywhere.com'
+DEBUG = True
+if DEBUG:
+    SITE_URL = 'http://localhost:5176' # Puerto detectado actualmente
+else:
+    SITE_URL = 'https://elote.pythonanywhere.com'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -24,6 +29,9 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = 'bdelgadollalli@gmail.com'
 EMAIL_HOST_PASSWORD = 'Fe73595530@'
 EMAIL_USE_TLS = True
+
+# MERCADO PAGO
+MERCADO_PAGO_ACCESS_TOKEN = 'APP_USR-1636658883383755-051209-e9598184eaaccc3ada2a10d42846a256-3396526426'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,7 +45,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 SECRET_KEY = 'django-insecure-2yaw$glzp$*6ka0g_z4hk(v1!tc^x&qjty3t@-=(h7b%_ef4vw'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = ['Elote.pythonanywhere.com', '127.0.0.1', 'localhost']
 

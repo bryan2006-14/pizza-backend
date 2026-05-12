@@ -398,6 +398,8 @@ class Pago(models.Model):
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     metodo_pago = models.CharField(max_length=45, choices=METODO_PAGO_CHOICES)
     estado = models.CharField(max_length=45, choices=ESTADO_PAGO_CHOICES, default='pendiente')
+    mercado_pago_preference_id = models.CharField(max_length=255, null=True, blank=True)
+    mercado_pago_payment_id = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         db_table = 'pagos'
