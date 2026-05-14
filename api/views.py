@@ -136,6 +136,21 @@ class CarritoListCreate(generics.ListCreateAPIView):
             return Carrito.objects.filter(cliente_id=cliente_id)
         return Carrito.objects.all()
 
+class LimpiarCarritoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        cliente_id = request.data.get('cliente_id') or getattr(request.user, 'id_cliente', None)
+        if not cliente_id:
+            return Response({"error": "ID de cliente no encontrado"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            Carrito.objects.filter(cliente_id=cliente_id).delete()
+            return Response({"message": "Carrito limpiado exitosamente"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class CarritoItemListCreate(generics.ListCreateAPIView):
     queryset = CarritoItem.objects.all()
     serializer_class = CarritoItemSerializer
@@ -176,6 +191,31 @@ class PedidoListCreate(generics.ListCreateAPIView):
     serializer_class = PedidoSerializer
     permission_classes = [IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        # Log para depuración
+        print(f"DEBUG: Datos recibidos para pedido: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print(f"!!! ERROR VALIDACION SERIALIZADOR !!!: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except ValidationError as e:
+            print(f"!!! ERROR VALIDACION PERFORM_CREATE !!!: {e.detail}")
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"!!! ERROR INESPERADO !!!:\n{error_trace}")
+            return Response({
+                "error": str(e),
+                "traceback": error_trace
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def get_queryset(self):
         # Filtrar por cliente si se especifica
         cliente_id = self.request.query_params.get('cliente_id')
@@ -184,69 +224,70 @@ class PedidoListCreate(generics.ListCreateAPIView):
         return Pedido.objects.all().order_by('-fecha_pedido')
         
     def perform_create(self, serializer):
-        # El guardado del pedido ahora disparará la creación de PedidoItems,
-        # los cuales tienen la lógica de descuento de stock en su método save()
-        pedido = serializer.save()
-        
-        # Opcional: Si tienes un carrito activo para este cliente, procesamos sus items
-        # Nota: Asegúrate de que el carrito tenga un campo 'activo' o maneja la lógica según tu app
-        carrito = Carrito.objects.filter(cliente=pedido.cliente).last()
-
-        if carrito:
-            items = CarritoItem.objects.filter(carrito=carrito)
+        try:
+            print("STEP 1: Guardando pedido base...")
+            pedido = serializer.save()
+            print(f"STEP 2: Pedido guardado con ID {pedido.id_pedido}")
             
-            # Verificación de stock por sucursal
-            for item in items:
-                # 1. Verificar el item principal (si es variante simple)
-                if item.variante:
-                    inv = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=item.variante).first()
-                    if not inv:
-                        raise ValidationError({'error': f'El producto {item.variante.producto.nombre} ({item.variante.tamaño}) no está disponible en esta sucursal.'})
-                    if inv.stock < item.cantidad:
-                        raise ValidationError({'error': f'Stock insuficiente para {item.variante.producto.nombre}. Disponible: {inv.stock}'})
-                
-                # 2. Verificar la promoción (detalles fijos)
-                elif item.promocion:
-                    detalles_fijos = PromocionDetalle.objects.filter(promocion=item.promocion, variante__isnull=False)
-                    for detalle in detalles_fijos:
-                        inv = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=detalle.variante).first()
-                        if not inv:
-                            raise ValidationError({'error': f'Un componente de la promo {item.promocion.titulo} no está disponible en esta sucursal.'})
-                        if inv.stock < (detalle.cantidad * item.cantidad):
-                            raise ValidationError({'error': f'Stock insuficiente para componente de promo: {detalle.variante.producto.nombre}'})
-                
-                # 3. Verificar las opciones elegidas
-                for opcion in item.opciones_promocion.all():
-                    inv_opc = InventarioSucursal.objects.filter(sucursal=pedido.sucursal, variante=opcion.variante).first()
-                    if not inv_opc:
-                         raise ValidationError({'error': f'La opción/extra {opcion.variante.producto.nombre} no está disponible en esta sucursal.'})
-                    if inv_opc.stock < (opcion.cantidad * item.cantidad):
-                        raise ValidationError({'error': f'Stock insuficiente para extra: {opcion.variante.producto.nombre}'})
-
-            # Crear PedidoItems (esto ejecutará PedidoItem.save() que descuenta el stock)
-            for item in items:
-                # Determinar precio base
-                precio_base = item.variante.precio if item.variante else item.promocion.precio
-                
-                pedido_item = PedidoItem.objects.create(
-                    pedido=pedido,
-                    variante=item.variante,
-                    promocion=item.promocion,
-                    cantidad=item.cantidad,
-                    precio=precio_base
-                )
-                
-                # Copiar opciones del carrito al pedido (para que el historial sea fiel y el precio suba)
-                for opcion in item.opciones_promocion.all():
-                    PedidoItemOpcion.objects.create(
-                        pedido_item=pedido_item,
-                        variante=opcion.variante,
-                        cantidad=opcion.cantidad
+            items_data = self.request.data.get('items', [])
+            print(f"STEP 3: Procesando {len(items_data)} items enviados...")
+            
+            if not items_data:
+                print("STEP 3.1: No hay items en request, buscando en Carrito DB...")
+                carrito = Carrito.objects.filter(cliente=pedido.cliente).last()
+                if carrito:
+                    items_obj = CarritoItem.objects.filter(carrito=carrito)
+                    for io in items_obj:
+                        items_data.append({
+                            'variante': io.variante.id_variante if io.variante else None,
+                            'promocion': io.promocion.id_promocion if io.promocion else None,
+                            'cantidad': io.cantidad,
+                            'precio': io.variante.precio if io.variante else io.promocion.precio,
+                            'opciones': [{'variante': op.variante.id_variante, 'cantidad': op.cantidad} for op in io.opciones_promocion.all()]
+                        })
+            
+            from django.db import transaction
+            with transaction.atomic():
+                for i, item in enumerate(items_data):
+                    v_id = item.get('variante')
+                    p_id = item.get('promocion')
+                    
+                    # Limpieza: Si vienen como strings vacíos o "null", convertirlos a None real de Python
+                    if not v_id or v_id == 'null': v_id = None
+                    if not p_id or p_id == 'null': p_id = None
+                    
+                    # Validación de integridad antes de crear
+                    if not v_id and not p_id:
+                        print(f"ERROR: Item {i} no tiene ni variante ni promocion.")
+                        continue # Saltamos items inválidos para evitar el error 500
+                    
+                    print(f"STEP 4.{i}: Creando PedidoItem (V:{v_id}, P:{p_id})...")
+                    pedido_item = PedidoItem.objects.create(
+                        pedido=pedido,
+                        variante_id=v_id,
+                        promocion_id=p_id,
+                        cantidad=item.get('cantidad', 1),
+                        precio=item.get('precio') or 0
                     )
-        
-            # Limpiar carrito
-            items.delete()
-            # carrito.delete() # Opcional si quieres borrar el carrito entero o solo vaciarlo
+                    
+                    opciones = item.get('opciones', item.get('opciones_promocion', []))
+                    for j, opc in enumerate(opciones):
+                        print(f"STEP 4.{i}.{j}: Añadiendo opcion {opc.get('variante')}...")
+                        PedidoItemOpcion.objects.create(
+                            pedido_item=pedido_item,
+                            variante_id=opc.get('variante'),
+                            cantidad=opc.get('cantidad', 1)
+                        )
+            
+            # print("STEP 5: Limpiando carrito de la base de datos...")
+            # Carrito.objects.filter(cliente=pedido.cliente).delete()
+            print("STEP 6: Proceso completado con éxito.")
+            
+        except Exception as e:
+            print(f"!!! ERROR EN PERFORM_CREATE !!!: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise ValidationError({'error': f'Error interno al procesar el pedido: {str(e)}'})
 
 class PedidoItemListCreate(generics.ListCreateAPIView):
     queryset = PedidoItem.objects.all()
@@ -552,110 +593,341 @@ class PagoSearchView(DynamicSearchView):
 # 💳 MERCADO PAGO INTEGRATION
 # ====================================================
 
+@transaction.atomic
+def procesar_pago_exitoso(payment_id, session_id):
+    print(f"DEBUG: Iniciando procesar_pago_exitoso para MP_ID: {payment_id}, Session: {session_id}")
+    
+    # 1. Verificar si este pago ya fue procesado (idempotencia)
+    pago_existente = Pago.objects.filter(mercado_pago_payment_id=str(payment_id)).first()
+    if pago_existente:
+        print(f"DEBUG: Pago {payment_id} ya existe. Retornando pedido existente.")
+        return pago_existente.pedido
+
+    # 2. Obtener la sesión con bloqueo para evitar procesamiento doble
+    try:
+        session = CheckoutSession.objects.select_for_update().get(id=session_id)
+        print(f"DEBUG: Sesión encontrada para cliente: {session.cliente.usuario}")
+        if session.pagado:
+            print(f"DEBUG: Sesión {session_id} ya marcada como pagada.")
+            return session.pedido_creado
+    except CheckoutSession.DoesNotExist:
+        print(f"ERROR: Sesión {session_id} no encontrada en la base de datos.")
+        return None
+
+    # 3. Crear el Pedido real
+    try:
+        # Calculamos el total de los items del snapshot
+        total_items = 0
+        for item in session.items_snapshot:
+            subtotal = item.get('subtotal', 0)
+            print(f"DEBUG: Item snapshot subtotal: {subtotal}")
+            total_items += float(subtotal)
+            
+        total_final = total_items + float(session.costo_delivery)
+        print(f"DEBUG: Total calculado: {total_final} (Items: {total_items} + Delivery: {session.costo_delivery})")
+
+        pedido = Pedido.objects.create(
+            cliente=session.cliente,
+            sucursal=session.sucursal,
+            direccion=session.direccion,
+            tipo_entrega=session.tipo_entrega,
+            costo_delivery=session.costo_delivery,
+            estado='pendiente' # Se confirmará abajo
+        )
+        print(f"DEBUG: Pedido creado con ID: {pedido.id_pedido}, Codigo: {pedido.codigo}")
+
+        # 4. Crear los PedidoItems desde el snapshot de la sesión
+        for item_data in session.items_snapshot:
+            # Obtener el precio unitario del item principal
+            precio_unitario = 0
+            if item_data.get('variante_info'):
+                precio_unitario = float(item_data['variante_info'].get('precio', 0))
+            elif item_data.get('promocion_info'):
+                precio_unitario = float(item_data['promocion_info'].get('precio', 0))
+            
+            print(f"DEBUG: Creando PedidoItem para variante/promo. Precio: {precio_unitario}")
+            
+            pedido_item = PedidoItem.objects.create(
+                pedido=pedido,
+                variante_id=item_data.get('variante'),
+                promocion_id=item_data.get('promocion'),
+                cantidad=int(item_data.get('cantidad', 1)),
+                precio=precio_unitario
+            )
+            
+            # Copiar opciones/extras si existen
+            opciones = item_data.get('opciones_promocion', [])
+            for opcion_data in opciones:
+                v_id = opcion_data.get('variante')
+                cant = int(opcion_data.get('cantidad', 1))
+                print(f"DEBUG: Añadiendo opción {v_id} x{cant}")
+                PedidoItemOpcion.objects.create(
+                    pedido_item=pedido_item,
+                    variante_id=v_id,
+                    cantidad=cant
+                )
+
+        # 5. Registrar el Pago
+        pago = Pago.objects.create(
+            pedido=pedido,
+            monto=total_final,
+            metodo_pago='tarjeta',
+            estado='completado',
+            mercado_pago_payment_id=payment_id,
+            mercado_pago_preference_id=session.preference_id
+        )
+        print(f"DEBUG: Pago registrado: {pago.id_pago}")
+
+        # 6. Descontar stock
+        print("DEBUG: Ejecutando descuento de stock...")
+        pedido.confirmar_y_descontar_stock()
+
+        # 7. Marcar sesión como completada y vincular pedido
+        session.pagado = True
+        session.pedido_creado = pedido
+        session.save()
+
+        # 8. LIMPIAR EL CARRITO del cliente (borramos los items)
+        from .models import CarritoItem
+        deleted_count, _ = CarritoItem.objects.filter(carrito__cliente=session.cliente).delete()
+        print(f"DEBUG: Carrito limpiado. Items borrados: {deleted_count}")
+
+        return pedido
+
+    except Exception as e:
+        import traceback
+        print(f"!!! ERROR CRITICO EN PROCESAR_PAGO_EXITOSO !!!: {str(e)}")
+        print(traceback.format_exc())
+        raise e
+
 class MercadoPagoPreferenceView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        pedido_id = request.data.get('id_pedido')
-        if not pedido_id:
-            return Response({"error": "ID de pedido no proporcionado"}, status=status.HTTP_400_BAD_REQUEST)
+        cliente_id = request.data.get('cliente') or getattr(request.user, 'id_cliente', None)
+        sucursal_id = request.data.get('sucursal')
+        direccion = request.data.get('direccion')
+        tipo_entrega = request.data.get('tipo_entrega')
+        costo_delivery = request.data.get('costo_delivery', 0)
 
-        pedido = get_object_or_404(Pedido, id_pedido=pedido_id)
-        
-        # Calcular el total del pedido usando el serializador para ser consistentes
-        serializer = PedidoSerializer(pedido)
-        total_pedido = serializer.data.get('total')
+        if not sucursal_id or not direccion:
+            return Response({"error": "Faltan datos de sucursal o dirección"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validar total
-        if not total_pedido or float(total_pedido) <= 0:
-            return Response({"error": "El total del pedido debe ser mayor a 0"}, status=status.HTTP_400_BAD_REQUEST)
+        # Obtener el carrito actual del cliente
+        try:
+            from .models import Carrito
+            carrito = Carrito.objects.get(cliente_id=cliente_id)
+        except Carrito.DoesNotExist:
+            return Response({"error": "El carrito no existe"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Serializar el carrito para obtener el total y los items (snapshot)
+        cart_serializer = CarritoSerializer(carrito)
+        total_carrito = float(cart_serializer.data.get('total', 0))
+        total_final = total_carrito + float(costo_delivery)
+
+        if total_final <= 0:
+            return Response({"error": "El carrito está vacío o el total es inválido"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Configurar Mercado Pago
         sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
 
-        # Crear el item de la preferencia (SIMPLIFICADO AL MÁXIMO PARA DIAGNÓSTICO)
+        # Preparar la sesión de checkout (borrador)
+        checkout_session = CheckoutSession.objects.create(
+            cliente_id=cliente_id,
+            sucursal_id=sucursal_id,
+            direccion=direccion,
+            tipo_entrega=tipo_entrega,
+            costo_delivery=costo_delivery,
+            preference_id=None, # Se actualizará después
+            items_snapshot=cart_serializer.data['items'] # Guardamos qué está comprando
+        )
+
         try:
-            total_float = float(total_pedido)
             preference_data = {
                 "items": [
                     {
-                        "title": f"Pizza Total - {pedido.codigo}",
+                        "title": f"Pizza Total - Pedido en {tipo_entrega}",
                         "quantity": 1,
-                        "unit_price": round(total_float, 2),
+                        "unit_price": float(round(total_final, 2)),
                         "currency_id": "PEN"
                     }
                 ],
-                "external_reference": str(pedido.id_pedido),
+                "external_reference": str(checkout_session.id),
+                "back_urls": {
+                    "success": "http://127.0.0.1:5173/pago-exitoso",
+                    "failure": "http://127.0.0.1:5173/carrito",
+                    "pending": "http://127.0.0.1:5173/pago-exitoso"
+                },
+                "auto_return": "approved",
+                "payment_methods": {
+                    "excluded_payment_types": [
+                        {"id": "ticket"}
+                    ],
+                    "installments": 12
+                },
             }
             
-            print(f"DEBUG: Intentando crear preferencia con: {preference_data}")
-            
+            print(f"DEBUG MP: Enviando data: {preference_data}")
             preference_response = sdk.preference().create(preference_data)
-            status_code = preference_response["status"]
-            preference = preference_response["response"]
             
-            if status_code >= 400:
-                print(f"!!! ERROR CRITICO MP !!! Status: {status_code}")
-                print(f"Respuesta de MP: {preference}")
+            if preference_response["status"] >= 400:
+                error_detail = preference_response.get("response", "Sin detalle")
+                print(f"!!! ERROR MP SDK !!! Status: {preference_response['status']}, Detail: {error_detail}")
+                checkout_session.delete()
                 return Response({
-                    "error": "Error de validación en Mercado Pago",
-                    "detail": preference
+                    "error": "Error al crear la preferencia en Mercado Pago",
+                    "detail": error_detail
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+            preference = preference_response["response"]
+            
+            # Actualizar la sesión con el ID de preferencia real
+            checkout_session.preference_id = preference['id']
+            checkout_session.save()
+
+            return Response({
+                "preference_id": preference['id'],
+                "init_point": preference['init_point']
+            }, status=status.HTTP_200_OK)
+
         except Exception as e:
-            print(f"!!! EXCEPCION MP !!!: {str(e)}")
+            if checkout_session.pk:
+                checkout_session.delete()
+            import traceback
+            print(f"!!! EXCEPCION INTERNA !!!: {str(e)}")
+            print(traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Guardar o actualizar la información del pago
-        pago, created = Pago.objects.update_or_create(
-            pedido=pedido,
-            defaults={
-                'monto': total_pedido,
-                'metodo_pago': 'tarjeta',
-                'mercado_pago_preference_id': preference['id']
-            }
-        )
-
-        return Response({
-            "preference_id": preference['id'],
-            "init_point": preference['init_point'] # Punto de inicio para el checkout pro si se desea
-        }, status=status.HTTP_200_OK)
-
 class MercadoPagoWebhookView(APIView):
-    permission_classes = [AllowAny] # Mercado Pago llama sin autenticacin Bearer
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        # El webhook de MP enva el ID del recurso
-        # Para simplificar y dado que es modo prueba, solo aceptamos la notificacin
-        # En produccin se debera validar el pago con sdk.payment().get(id)
-        
-        topic = request.query_params.get('topic')
         resource_id = request.query_params.get('id') or request.data.get('data', {}).get('id')
+        type_notif = request.data.get('type') or request.query_params.get('topic')
 
-        if topic == 'payment' or request.data.get('type') == 'payment':
-            # Aqu deberamos consultar a MP por el estado real del pago
-            sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
-            payment_info = sdk.payment().get(resource_id)
-            payment_data = payment_info["response"]
+        if type_notif == 'payment' or type_notif == 'payment':
+            try:
+                sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
+                payment_info = sdk.payment().get(resource_id)
+                payment_data = payment_info["response"]
 
-            external_reference = payment_data.get('external_reference')
-            status_mp = payment_data.get('status')
+                status_mp = payment_data.get('status')
+                session_id = payment_data.get('external_reference')
 
-            if external_reference:
-                try:
-                    pedido = Pedido.objects.get(id_pedido=external_reference)
-                    pago = Pago.objects.get(pedido=pedido)
-                    pago.mercado_pago_payment_id = resource_id
-                    
-                    if status_mp == 'approved':
-                        pago.estado = 'completado'
-                        pedido.estado = 'confirmado'
-                    elif status_mp in ['rejected', 'cancelled']:
-                        pago.estado = 'fallido'
-                    
-                    pago.save()
-                    pedido.save()
-                except (Pedido.DoesNotExist, Pago.DoesNotExist):
-                    pass
+                if status_mp == 'approved' and session_id:
+                    procesar_pago_exitoso(resource_id, session_id)
+                    print(f"WEBHOOK: Pago {resource_id} procesado para sesión {session_id}")
+                
+            except Exception as e:
+                print(f"WEBHOOK ERROR: {str(e)}")
 
         return Response(status=status.HTTP_200_OK)
+
+
+class ConfirmarPagoManualView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        payment_id = request.data.get('payment_id')
+        session_id = request.data.get('external_reference')
+        print(f"DEBUG: Intento de confirmación manual. MP_ID: {payment_id}, Session: {session_id}")
+        
+        if not payment_id or not session_id:
+            return Response({"error": "Faltan datos de confirmación"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Procesar el pago y crear el pedido si no existe
+            pedido = procesar_pago_exitoso(payment_id, session_id)
+            
+            if pedido:
+                return Response({
+                    "message": "Pago confirmado y pedido creado exitosamente",
+                    "id_pedido": pedido.id_pedido,
+                    "codigo": pedido.codigo
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "No se pudo procesar el pago o ya fue procesado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class VerificarCheckoutView(APIView):
+    """
+    Endpoint que el frontend llama al regresar de Mercado Pago.
+    Busca la sesión de checkout por preference_id y verifica el pago via MP API.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        preference_id = request.data.get('preference_id')
+        print(f"DEBUG VERIFICAR: Recibido preference_id: {preference_id}")
+        
+        if not preference_id:
+            return Response({"error": "Falta preference_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Buscar la sesión de checkout
+        try:
+            session = CheckoutSession.objects.get(preference_id=preference_id)
+        except CheckoutSession.DoesNotExist:
+            print(f"DEBUG VERIFICAR: Sesión no encontrada para preference: {preference_id}")
+            return Response({"error": "Sesión de checkout no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Si ya fue procesada, devolver el pedido existente
+        if session.pagado and session.pedido_creado:
+            print(f"DEBUG VERIFICAR: Sesión ya pagada. Pedido: {session.pedido_creado.id_pedido}")
+            return Response({
+                "status": "already_processed",
+                "id_pedido": session.pedido_creado.id_pedido,
+                "codigo": session.pedido_creado.codigo
+            }, status=status.HTTP_200_OK)
+
+        # 2. Consultar a Mercado Pago por los pagos de esta preferencia
+        try:
+            sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
+            
+            # Buscar pagos por external_reference (que es el session.id)
+            search_result = sdk.payment().search({
+                "external_reference": str(session.id)
+            })
+            
+            print(f"DEBUG VERIFICAR: Respuesta búsqueda MP: status={search_result.get('status')}")
+            
+            if search_result.get("status") == 200:
+                results = search_result.get("response", {}).get("results", [])
+                print(f"DEBUG VERIFICAR: Pagos encontrados: {len(results)}")
+                
+                for payment in results:
+                    payment_status = payment.get("status")
+                    payment_id = str(payment.get("id"))
+                    print(f"DEBUG VERIFICAR: Pago {payment_id} - Estado: {payment_status}")
+                    
+                    if payment_status == "approved":
+                        # ¡Pago aprobado! Procesar el pedido
+                        pedido = procesar_pago_exitoso(payment_id, str(session.id))
+                        
+                        if pedido:
+                            return Response({
+                                "status": "approved",
+                                "id_pedido": pedido.id_pedido,
+                                "codigo": pedido.codigo
+                            }, status=status.HTTP_200_OK)
+                
+                # No hay pagos aprobados aún
+                return Response({
+                    "status": "pending",
+                    "message": "No se encontraron pagos aprobados aún"
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "status": "error",
+                    "message": "Error consultando Mercado Pago"
+                }, status=status.HTTP_502_BAD_GATEWAY)
+
+        except Exception as e:
+            import traceback
+            print(f"DEBUG VERIFICAR ERROR: {str(e)}")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

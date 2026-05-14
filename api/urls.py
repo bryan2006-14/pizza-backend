@@ -27,7 +27,8 @@ urlpatterns = [
     path('promociones-detalle/', PromocionDetalleListCreate.as_view(), name='promociones-detalle'),
     
     # CARRITO
-    path('carritos/', CarritoListCreate.as_view(), name='carritos'),
+    path('carritos/', CarritoListCreate.as_view(), name='carrito-list-create'),
+    path('carritos/limpiar/', LimpiarCarritoView.as_view(), name='carrito-limpiar'),
     path('carritos-items/', CarritoItemListCreate.as_view(), name='carritos-items'),
     path('carritos-items/<int:id_item>/', CarritoItemDetail.as_view(), name='carrito-item-detail'),
     
@@ -81,6 +82,8 @@ urlpatterns = [
     
     # MERCADO PAGO
     path('mercadopago/preference/', MercadoPagoPreferenceView.as_view(), name='mercadopago-preference'),
+    path('mercadopago/confirmar-pago-manual/', ConfirmarPagoManualView.as_view(), name='confirmar-pago-manual'),
+    path('mercadopago/verificar-checkout/', VerificarCheckoutView.as_view(), name='verificar-checkout'),
     path('mercadopago-webhook/', MercadoPagoWebhookView.as_view(), name='mercadopago-webhook'),
     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

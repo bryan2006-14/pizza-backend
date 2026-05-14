@@ -1,3 +1,4 @@
+import uuid 
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
@@ -285,11 +286,75 @@ class Pedido(models.Model):
     sucursal = models.ForeignKey(Sucursal, on_delete=models.PROTECT, db_column='sucursal_id')
     fecha_pedido = models.DateTimeField(auto_now_add=True)
     fecha_entrega = models.DateTimeField(null=True, blank=True)
-    estado = models.CharField(max_length=45, choices=ESTADO_CHOICES, default='pendiente')
-    direccion = models.CharField(max_length=85)
-    codigo = models.CharField(max_length=45, unique=True)
-    tipo_entrega = models.CharField(max_length=20, choices=[('delivery', 'Delivery'), ('recojo', 'Recojo en tienda')], default='delivery')
-    costo_delivery = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    estado = models.CharField(
+        max_length=20, 
+        choices=[
+            ('pendiente_pago', 'Pendiente de Pago'), 
+            ('confirmado', 'Confirmado / Pagado'), 
+            ('preparacion', 'En Preparación'), 
+            ('camino', 'En Camino'), 
+            ('entregado', 'Entregado'), 
+            ('cancelado', 'Cancelado')
+        ], 
+        default='pendiente_pago'
+    )
+    direccion = models.CharField(max_length=255)
+    codigo = models.CharField(max_length=45, unique=True, blank=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.codigo:
+            import uuid
+            import time
+            self.codigo = f"HP-{int(time.time())}-{str(uuid.uuid4().hex if hasattr(uuid.uuid4(), 'hex') else uuid.uuid4())[:4].upper()}"
+        super().save(*args, **kwargs)
+        
+    tipo_entrega = models.CharField(max_length=20, choices=[('delivery', 'Delivery'), ('recojo', 'Recojo')], default='delivery')
+    costo_delivery = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    def confirmar_y_descontar_stock(self):
+        """
+        Cambia el estado a confirmado y descuenta el stock de todos los items.
+        Este proceso se llama solo tras un pago exitoso.
+        """
+        if self.estado == 'confirmado':
+            return # Ya está confirmado
+            
+        from django.db import transaction
+        with transaction.atomic():
+            self.estado = 'confirmado'
+            self.save()
+            
+            for item in self.items.all():
+                # Descontar stock del item principal
+                if item.variante:
+                    inv, _ = InventarioSucursal.objects.get_or_create(
+                        sucursal=self.sucursal, 
+                        variante=item.variante,
+                        defaults={'stock': 0}
+                    )
+                    inv.stock = models.F('stock') - item.cantidad
+                    inv.save()
+                
+                # Descontar stock si es promocion (items fijos)
+                if item.promocion:
+                    for det in item.promocion.detalles.filter(variante__isnull=False):
+                        inv, _ = InventarioSucursal.objects.get_or_create(
+                            sucursal=self.sucursal,
+                            variante=det.variante,
+                            defaults={'stock': 0}
+                        )
+                        inv.stock = models.F('stock') - (det.cantidad * item.cantidad)
+                        inv.save()
+                
+                # Descontar stock de las opciones/extras elegidas
+                for opcion in item.opciones_promocion.all():
+                    inv_opc, _ = InventarioSucursal.objects.get_or_create(
+                        sucursal=self.sucursal,
+                        variante=opcion.variante,
+                        defaults={'stock': 0}
+                    )
+                    inv_opc.stock = models.F('stock') - (opcion.cantidad * item.cantidad)
+                    inv_opc.save()
 
     class Meta:
         db_table = 'pedidos'
@@ -319,30 +384,9 @@ class PedidoItem(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        is_new = self.pk is None
+        # Eliminamos el descuento automático de stock aquí.
+        # Ahora se hace en pedido.confirmar_y_descontar_stock()
         super().save(*args, **kwargs)
-        
-        if is_new:
-            sucursal = self.pedido.sucursal
-            if self.variante:
-                inv, created = InventarioSucursal.objects.get_or_create(
-                    sucursal=sucursal, 
-                    variante=self.variante,
-                    defaults={'stock': 0}
-                )
-                inv.stock = max(0, inv.stock - self.cantidad)
-                inv.save()
-            
-            if self.promocion:
-                detalles = self.promocion.detalles.filter(variante__isnull=False)
-                for det in detalles:
-                    inv, created = InventarioSucursal.objects.get_or_create(
-                        sucursal=sucursal,
-                        variante=det.variante,
-                        defaults={'stock': 0}
-                    )
-                    inv.stock = max(0, inv.stock - (det.cantidad * self.cantidad))
-                    inv.save()
 
     def __str__(self):
         if self.variante:
@@ -362,20 +406,8 @@ class PedidoItemOpcion(models.Model):
         return f"Opción {self.id_opcion} - {self.variante} x{self.cantidad}"
     
     def save(self, *args, **kwargs):
-        is_new = self.pk is None
+        # El stock ahora se descuenta en pedido.confirmar_y_descontar_stock()
         super().save(*args, **kwargs)
-        
-        if is_new:
-            # Descontar stock de la opción elegida en la promoción
-            sucursal = self.pedido_item.pedido.sucursal
-            inv, created = InventarioSucursal.objects.get_or_create(
-                sucursal=sucursal,
-                variante=self.variante,
-                defaults={'stock': 0}
-            )
-            cantidad_total = self.cantidad * self.pedido_item.cantidad
-            inv.stock = max(0, inv.stock - cantidad_total)
-            inv.save()
 
 # ==================== PAGOS ====================
 
@@ -406,6 +438,27 @@ class Pago(models.Model):
 
     def __str__(self):
         return f"Pago {self.id_pago} - {self.estado} - ${self.monto}"
+
+# ==================== CHECKOUT SESSIONS ====================
+
+class CheckoutSession(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE)
+    direccion = models.CharField(max_length=255)
+    tipo_entrega = models.CharField(max_length=20)
+    costo_delivery = models.DecimalField(max_digits=10, decimal_places=2)
+    preference_id = models.CharField(max_length=255, null=True, blank=True)
+    items_snapshot = models.JSONField(null=True, blank=True) # Snapshot de los items en el momento del checkout
+    pagado = models.BooleanField(default=False)
+    pedido_creado = models.OneToOneField('Pedido', on_delete=models.SET_NULL, null=True, blank=True, related_name='checkout_session')
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'checkout_sessions'
+
+    def __str__(self):
+        return f"Session {self.id} - Cliente {self.cliente_id} - {'Pagado' if self.pagado else 'Pendiente'}"
 
 # ==================== MODELOS ADICIONALES QUE PODRÍAS ELIMINAR ====================
 # (Estos modelos existían en tu código original pero no están en la imagen)

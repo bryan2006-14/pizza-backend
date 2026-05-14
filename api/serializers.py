@@ -200,21 +200,23 @@ class PedidoItemSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_subtotal(self, obj):
-        price = float(obj.precio) # Este es el precio base guardado en el pedido
-        
-        # Sumar el precio de las opciones (extras, salsas, etc.) guardadas en este item
-        for opcion in obj.opciones_promocion.all():
-            # Si el item principal es un producto simple, cualquier opción es un extra de pago
-            if obj.variante:
-                price += float(opcion.variante.precio) * opcion.cantidad
-            else:
-                # Si es una promoción, solo sumamos el precio si NO es una pizza o bebida 
-                # (suponiendo que las pizzas/bebidas ya están incluidas en el precio del combo)
-                cat = (opcion.variante.producto.categoria.nombre if opcion.variante.producto.categoria else "").lower()
-                if 'pizza' not in cat and 'bebida' not in cat and 'gaseosa' not in cat:
-                    price += float(opcion.variante.precio) * opcion.cantidad
+        try:
+            price = float(obj.precio or 0) # Este es el precio base guardado en el pedido
             
-        return price * obj.cantidad
+            # Sumar el precio de las opciones (extras, salsas, etc.) guardadas en este item
+            for opcion in obj.opciones_promocion.all():
+                # Si el item principal es un producto simple, cualquier opción es un extra de pago
+                if obj.variante:
+                    price += float(opcion.variante.precio or 0) * opcion.cantidad
+                else:
+                    # Si es una promoción, solo sumamos el precio si NO es una pizza o bebida 
+                    cat = (opcion.variante.producto.categoria.nombre if opcion.variante.producto.categoria else "").lower()
+                    if 'pizza' not in cat and 'bebida' not in cat and 'gaseosa' not in cat:
+                        price += float(opcion.variante.precio or 0) * opcion.cantidad
+                
+            return price * obj.cantidad
+        except Exception:
+            return 0
     
     def validate(self, data):
         # Validar que solo uno de los dos (variante o promocion) esté presente
@@ -230,6 +232,7 @@ class PedidoSerializer(serializers.ModelSerializer):
     sucursal_direccion = serializers.CharField(source='sucursal.direccion', read_only=True)
     total = serializers.SerializerMethodField()
     pago_info = serializers.SerializerMethodField()
+    codigo = serializers.CharField(read_only=True)
     
     class Meta:
         model = Pedido
@@ -237,30 +240,41 @@ class PedidoSerializer(serializers.ModelSerializer):
     
     def get_total(self, obj):
         total = 0
-        for item in obj.items.all():
-            item_price = float(item.precio)
-            # Sumar extras/opciones igual que PedidoItemSerializer.get_subtotal
-            for opcion in item.opciones_promocion.all():
-                if item.variante:
-                    item_price += float(opcion.variante.precio) * opcion.cantidad
-                else:
-                    cat = (opcion.variante.producto.categoria.nombre if opcion.variante.producto.categoria else "").lower()
-                    if 'pizza' not in cat and 'bebida' not in cat and 'gaseosa' not in cat:
-                        item_price += float(opcion.variante.precio) * opcion.cantidad
-            total += item_price * item.cantidad
-        # Sumar el costo de delivery si aplica
-        total += float(obj.costo_delivery)
+        try:
+            for item in obj.items.all():
+                item_price = float(item.precio or 0)
+                # Sumar extras/opciones igual que PedidoItemSerializer.get_subtotal
+                for opcion in item.opciones_promocion.all():
+                    if item.variante:
+                        item_price += float(opcion.variante.precio or 0) * opcion.cantidad
+                    else:
+                        cat = (opcion.variante.producto.categoria.nombre if opcion.variante.producto.categoria else "").lower()
+                        if 'pizza' not in cat and 'bebida' not in cat and 'gaseosa' not in cat:
+                            item_price += float(opcion.variante.precio or 0) * opcion.cantidad
+                total += item_price * item.cantidad
+            # Sumar el costo de delivery si aplica
+            total += float(obj.costo_delivery or 0)
+        except Exception as e:
+            print(f"Error calculando total: {e}")
         return total
     
     def get_pago_info(self, obj):
         try:
-            pago = obj.pago
+            # Intentamos obtener el pago asociado
+            pago = obj.pago # Relación OneToOne o ForeignKey
+            if not pago:
+                return None
             return {
                 'id_pago': pago.id_pago,
-                'monto': float(pago.monto),
-                'metodo_pago': pago.metodo_pago,
-                'estado': pago.estado
+                'metodo': pago.metodo,
+                'estado': pago.estado,
+                'monto': float(pago.monto or 0),
+                'fecha': pago.fecha_pago,
+                'mercado_pago_preference_id': getattr(pago, 'mercado_pago_preference_id', None)
             }
+        except Exception:
+            # Si no hay pago (común en pedidos nuevos), devolvemos None sin fallar
+            return None
         except:
             return None
 

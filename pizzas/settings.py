@@ -19,7 +19,7 @@ import dj_database_url
 # SITE_URL = 'https://elote.pythonanywhere.com'
 DEBUG = True
 if DEBUG:
-    SITE_URL = 'http://localhost:5176' # Puerto detectado actualmente
+    SITE_URL = 'http://localhost:5173' # Puerto detectado actualmente
 else:
     SITE_URL = 'https://elote.pythonanywhere.com'
 
